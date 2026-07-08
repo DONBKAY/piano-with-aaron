@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Piano with Aaron",
+    "slug": "piano-with-aaron",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#FBF7F0"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pianowithaaron.app"
+    },
+    "android": {
+      "package": "com.pianowithaaron.app"
+    },
+    "extra": {
+      "apiUrl": "http://localhost:4000/api"
+    }
+  }
+}
