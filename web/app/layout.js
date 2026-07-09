@@ -1,4 +1,6 @@
 import "./globals.css";
+import Header from "../components/Header";
+import WhatsAppButton from "../components/WhatsAppButton";
 
 export const metadata = {
   title: "Piano with Aaron",
@@ -8,7 +10,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Header />
+        {children}
+        <WhatsAppButton />
+      </body>
     </html>
   );
 }
