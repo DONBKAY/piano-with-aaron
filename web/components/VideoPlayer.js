@@ -7,6 +7,9 @@ function toEmbedUrl(url) {
   const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
   if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
 
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+
   return null; // treat as a direct video file (S3, etc.)
 }
 
