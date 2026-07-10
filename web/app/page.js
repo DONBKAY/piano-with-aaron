@@ -4,12 +4,7 @@ import { useEffect, useState } from "react";
 import { courseApi } from "../lib/api";
 import CourseCard from "../components/CourseCard";
 
-const CATEGORIES = [
-  { name: "Beginners Corner", blurb: "Start from zero with confidence." },
-  { name: "Intermediate Pathway", blurb: "Build technique and musicality." },
-  { name: "Advanced Techniques", blurb: "Improvise, syncopate, and impress." },
-  { name: "Learning Songs", blurb: "Play the music you actually love." },
-];
+
 
 export default function Home() {
   const [featured, setFeatured] = useState([]);
@@ -50,21 +45,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <section className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="font-display text-3xl mb-8 text-center">Course Categories</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {CATEGORIES.map((cat) => (
-            <a
-              key={cat.name}
-              href={`/courses?category=${encodeURIComponent(cat.name)}`}
-              className="rounded-2xl border border-gold/20 p-6 hover:shadow-lg hover:-translate-y-1 transition bg-white/40 dark:bg-deep/40"
-            >
-              <h3 className="font-display text-xl mb-2">{cat.name}</h3>
-              <p className="text-sm opacity-70">{cat.blurb}</p>
-            </a>
-          ))}
-        </div>
-      </section>
+      
 
       {featured.length > 0 && (
         <section className="max-w-6xl mx-auto px-4 py-16">
