@@ -26,19 +26,19 @@ export default function VideoPlayer({ videoUrl, title }) {
 
   if (embedUrl) {
     return (
-      <div className="aspect-video rounded-xl overflow-hidden bg-black">
+      <div className="relative aspect-video rounded-xl overflow-hidden bg-black">
         <iframe
           key={embedUrl}
           src={embedUrl}
           title={title}
-          className="w-full h-full"
+          className="absolute inset-0 w-full h-full"
+          style={{ border: 0 }}
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
         />
       </div>
     );
   }
-
   return (
     <div className="aspect-video rounded-xl overflow-hidden bg-black">
       <video key={videoUrl} controls className="w-full h-full">
