@@ -1,142 +1,50 @@
-export default function AdminDashboard() {
-  const stats = [
-    {
-      title: "Students",
-      value: "0",
-      icon: "👨‍🎓",
-    },
-    {
-      title: "Courses",
-      value: "0",
-      icon: "📚",
-    },
-    {
-      title: "Revenue",
-      value: "GH₵0",
-      icon: "💰",
-    },
-    {
-      title: "Enrollments",
-      value: "0",
-      icon: "🎓",
-    },
-  ];
+"use client";
 
-  const actions = [
-    {
-      title: "New Course",
-      href: "/admin/new",
-      icon: "➕",
-    },
-    {
-      title: "Manage Courses",
-      href: "/admin/courses",
-      icon: "📚",
-    },
-    {
-      title: "Students",
-      href: "/admin/students",
-      icon: "👨‍🎓",
-    },
-    {
-      title: "Analytics",
-      href: "/admin/analytics",
-      icon: "📈",
-    },
-  ];
+import { useEffect, useState } from "react";
+import { getToken } from "../../lib/api";
+import { adminApi } from "../../lib/adminApi";
+
+function StatCard({ label, value }) {
+  return (
+    <div className="border border-gold/20 rounded-xl p-5 bg-white/40 dark:bg-deep/40">
+      <p className="text-sm opacity-60 mb-1">{label}</p>
+      <p className="font-display text-3xl">{value}</p>
+    </div>
+  );
+}
+
+export default function AdminDashboardPage() {
+  const token = getToken();
+  const [stats, setStats] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    adminApi
+      .dashboard(token)
+      .then(setStats)
+      .catch((err) => setError(err.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="space-y-8">
+    <div>
+      <h1 className="font-display text-3xl mb-6">Dashboard</h1>
+      {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
-      {/* Header */}
-
-      <div>
-        <h1 className="text-4xl font-bold">
-          Dashboard
-        </h1>
-
-        <p className="text-gray-500 mt-2">
-          Welcome back! Manage your Piano With Aaron LMS from one place.
-        </p>
-      </div>
-
-      {/* Stats */}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-
-        {stats.map((stat) => (
-
-          <div
-            key={stat.title}
-            className="bg-white rounded-xl shadow-sm border p-6"
-          >
-
-            <div className="text-3xl">
-              {stat.icon}
-            </div>
-
-            <p className="text-gray-500 mt-4">
-              {stat.title}
-            </p>
-
-            <h2 className="text-3xl font-bold mt-2">
-              {stat.value}
-            </h2>
-
-          </div>
-
-        ))}
-
-      </div>
-
-      {/* Quick Actions */}
-
-      <div>
-
-        <h2 className="text-2xl font-semibold mb-4">
-          Quick Actions
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-
-          {actions.map((action) => (
-
-            <a
-              key={action.title}
-              href={action.href}
-              className="rounded-xl border bg-white p-6 hover:shadow-md transition"
-            >
-
-              <div className="text-3xl">
-                {action.icon}
-              </div>
-
-              <h3 className="font-semibold mt-4">
-                {action.title}
-              </h3>
-
-            </a>
-
-          ))}
-
+      {!stats && !error ? (
+        <p className="opacity-60">Loading...</p>
+      ) : stats ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard label="Students" value={stats.students} />
+          <StatCard label="Courses" value={stats.courses} />
+          <StatCard label="Enrollments" value={stats.enrollments} />
+          <StatCard label="Revenue (GHS)" value={stats.revenue} />
         </div>
+      ) : null}
 
-      </div>
-
-      {/* Recent Activity */}
-
-      <div className="rounded-xl border bg-white p-6">
-
-        <h2 className="text-2xl font-semibold mb-4">
-          Recent Activity
-        </h2>
-
-        <p className="text-gray-500">
-          No recent activity yet.
-        </p>
-
-      </div>
-
+      <a href="/admin/courses" className="text-gold underline text-sm">
+        Manage courses →
+      </a>
     </div>
   );
 }
