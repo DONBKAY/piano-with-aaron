@@ -3,7 +3,11 @@ function getEmbed(url) {
 
   const youtubeMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]+)/);
   if (youtubeMatch) {
-    return { src: `https://www.youtube.com/embed/${youtubeMatch[1]}`, provider: "youtube" };
+    const params = "rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&fs=1";
+    return {
+      src: `https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?${params}`,
+      provider: "youtube",
+    };
   }
 
   const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
@@ -31,8 +35,6 @@ export default function VideoPlayer({ videoUrl, title }) {
   }
 
   if (embed) {
-    // Google Drive's own player scales/crops to fill whatever box it's given,
-    // so it needs a plain fixed-height box instead of a forced 16:9 aspect ratio.
     if (embed.provider === "drive") {
       return (
         <div className="w-full rounded-xl overflow-hidden bg-black" style={{ height: "70vh", minHeight: 320, maxHeight: 640 }}>
