@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+
 import { getToken } from "../../lib/api";
 import { decodeToken } from "../../lib/adminApi";
 
 export default function AdminLayout({ children }) {
   const router = useRouter();
+  const pathname = usePathname();
+
   const [checked, setChecked] = useState(false);
   const [authorized, setAuthorized] = useState(false);
 
@@ -15,37 +19,114 @@ export default function AdminLayout({ children }) {
     const payload = token ? decodeToken(token) : null;
 
     if (!payload || payload.role !== "ADMIN") {
-      // Not an admin (or not logged in) — the backend would reject any
-      // admin API call anyway; this just avoids showing the UI at all.
       router.push("/login?next=/admin");
       return;
     }
+
     setAuthorized(true);
     setChecked(true);
   }, [router]);
 
   if (!checked) {
-    return <main className="p-8">Checking access...</main>;
+    return (
+      <main className="flex items-center justify-center min-h-screen">
+        <p className="text-lg opacity-70">Checking administrator access...</p>
+      </main>
+    );
   }
+
   if (!authorized) return null;
 
+  const menuItems = [
+    {
+      title: "Dashboard",
+      href: "/admin",
+      icon: "🏠",
+    },
+    {
+      title: "Courses",
+      href: "/admin/courses",
+      icon: "📚",
+    },
+    {
+      title: "New Course",
+      href: "/admin/new",
+      icon: "➕",
+    },
+    {
+      title: "Students",
+      href: "/admin/students",
+      icon: "👨‍🎓",
+    },
+    {
+      title: "Payments",
+      href: "/admin/payments",
+      icon: "💳",
+    },
+    {
+      title: "Analytics",
+      href: "/admin/analytics",
+      icon: "📈",
+    },
+    {
+      title: "Categories",
+      href: "/admin/categories",
+      icon: "🏷️",
+    },
+  ];
+
   return (
-    <div className="flex flex-col md:flex-row min-h-screen">
-      <aside className="md:w-64 border-b md:border-b-0 md:border-r border-gold/20 bg-white/40 dark:bg-deep/40 p-4">
-        <h2 className="font-display text-xl mb-6">Admin</h2>
-        <nav className="space-y-1 text-sm">
-          <a href="/admin/courses" className="block px-3 py-2 rounded-lg hover:bg-gold/10">
-            Courses
-          </a>
-          <a href="/admin/new" className="block px-3 py-2 rounded-lg hover:bg-gold/10">
-            + New Course
-          </a>
-          <a href="/" className="block px-3 py-2 rounded-lg hover:bg-gold/10 opacity-60 mt-6">
-            ← Back to site
-          </a>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <aside className="w-72 border-r bg-white shadow-sm">
+
+        <div className="border-b px-6 py-6">
+          <h1 className="text-2xl font-bold font-display">
+            Piano With Aaron
+          </h1>
+
+          <p className="text-sm text-gray-500 mt-1">
+            Admin Portal
+          </p>
+        </div>
+
+        <nav className="p-4 space-y-2">
+
+          {menuItems.map((item) => {
+            const active = pathname === item.href;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-all ${
+                  active
+                    ? "bg-yellow-100 text-yellow-900 font-semibold"
+                    : "hover:bg-gray-100"
+                }`}
+              >
+                <span>{item.icon}</span>
+                <span>{item.title}</span>
+              </Link>
+            );
+          })}
+
+          <div className="border-t my-6" />
+
+          <Link
+            href="/"
+            className="flex items-center gap-3 rounded-lg px-4 py-3 hover:bg-gray-100"
+          >
+            <span>🌐</span>
+            <span>Back to Website</span>
+          </Link>
         </nav>
       </aside>
-      <main className="flex-1 p-4 md:p-8">{children}</main>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        {children}
+      </main>
     </div>
   );
 }
