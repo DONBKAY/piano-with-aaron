@@ -41,3 +41,28 @@ export const adminApi = {
     }),
   deleteSection: (token, sectionId) =>
     request(`/admin/sections/${sectionId}`, token, { method: "DELETE" }),
+
+  createLesson: (token, sectionId, payload) =>
+    request(`/admin/sections/${sectionId}/lessons`, token, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateLesson: (token, lessonId, payload) =>
+    request(`/admin/lessons/${lessonId}`, token, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteLesson: (token, lessonId) =>
+    request(`/admin/lessons/${lessonId}`, token, { method: "DELETE" }),
+
+  getEnrollments: (token, courseId) => request(`/admin/courses/${courseId}/enrollments`, token),
+};
+
+export function decodeToken(token) {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+} 
