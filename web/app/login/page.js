@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authApi, saveToken } from "../../lib/api";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen" />}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +26,8 @@ export default function LoginPage() {
     try {
       const { token } = await authApi.login(form);
       saveToken(token);
-      router.push("/");
+      const next = searchParams.get("next");
+      router.push(next || "/");
     } catch (err) {
       setError(err.message);
     } finally {
