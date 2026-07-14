@@ -1,50 +1,67 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getToken } from "../../lib/api";
-import { adminApi } from "../../lib/adminApi";
+import { courseApi } from "../lib/api";
+import CourseCard from "../components/CourseCard";
 
-function StatCard({ label, value }) {
-  return (
-    <div className="border border-gold/20 rounded-xl p-5 bg-white/40 dark:bg-deep/40">
-      <p className="text-sm opacity-60 mb-1">{label}</p>
-      <p className="font-display text-3xl">{value}</p>
-    </div>
-  );
-}
-
-export default function AdminDashboardPage() {
-  const token = getToken();
-  const [stats, setStats] = useState(null);
-  const [error, setError] = useState("");
+export default function Home() {
+  const [featured, setFeatured] = useState([]);
 
   useEffect(() => {
-    adminApi
-      .dashboard(token)
-      .then(setStats)
-      .catch((err) => setError(err.message));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    courseApi
+      .list()
+      .then((data) => setFeatured(data.courses.slice(0, 3)))
+      .catch(() => setFeatured([]));
   }, []);
 
   return (
-    <div>
-      <h1 className="font-display text-3xl mb-6">Dashboard</h1>
-      {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-
-      {!stats && !error ? (
-        <p className="opacity-60">Loading...</p>
-      ) : stats ? (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Students" value={stats.students} />
-          <StatCard label="Courses" value={stats.courses} />
-          <StatCard label="Enrollments" value={stats.enrollments} />
-          <StatCard label="Revenue (GHS)" value={stats.revenue} />
+    <main>
+      <section className="relative min-h-[70vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/piano-hero.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-ink/70" />
+        <div className="relative z-10">
+          <p className="text-sm uppercase tracking-widest text-gold font-semibold mb-4">
+            Piano with Aaron
+          </p>
+          <h1 className="font-display text-5xl md:text-6xl max-w-3xl mb-6 text-cream">
+            Start Playing Piano Today
+          </h1>
+          <p className="opacity-80 max-w-xl mb-8 text-cream mx-auto">
+            Structured, premium video courses that take you from your first note
+            to playing the songs you love.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <a href="/courses" className="px-6 py-3 rounded-lg bg-gold text-ink font-semibold">
+              Browse courses
+            </a>
+            <a href="/signup" className="px-6 py-3 rounded-lg border border-cream/40 text-cream">
+              Sign up free
+            </a>
+          </div>
         </div>
-      ) : null}
+      </section>
 
-      <a href="/admin/courses" className="text-gold underline text-sm">
-        Manage courses →
-      </a>
-    </div>
+      {featured.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 py-16">
+          <h2 className="font-display text-3xl mb-8 text-center">Featured Courses</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featured.map((c) => (
+              <CourseCard key={c.id} course={c} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="max-w-4xl mx-auto px-4 py-16 text-center">
+        <h2 className="font-display text-3xl mb-8">What students are saying</h2>
+        <blockquote className="opacity-70 italic max-w-xl mx-auto">
+          "I went from not being able to read a note to playing my favorite
+          song in six weeks. The lessons are clear and easy to follow."
+        </blockquote>
+      </section>
+    </main>
   );
 }
