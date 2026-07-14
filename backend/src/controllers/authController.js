@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const prisma = require("../config/db");
 const { signToken } = require("../utils/jwt");
+const { sendPasswordResetEmail } = require("../services/emailService");
 
 const SALT_ROUNDS = 12;
 
@@ -74,9 +75,9 @@ async function me(req, res) {
   });
 }
 
-// Generates a reset token and (in production) emails it to the user.
-// For Phase 1 (no email service wired up yet) it returns the token in the
-// response ONLY when NODE_ENV !== "production", so you can test the flow.
+// Generates a reset token, emails it to the user via SMTP, and — outside
+// production only — also returns the token directly so the flow can still
+// be tested locally without a real inbox.
 async function forgotPassword(req, res) {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Email is required" });
@@ -99,10 +100,14 @@ async function forgotPassword(req, res) {
     },
   });
 
-  // TODO Phase 1.1: send this via email (SMTP config already in .env.example)
+  const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+  const resetUrl = `${clientUrl}/reset-password?token=${resetToken}`;
+
+  await sendPasswordResetEmail(user.email, resetUrl);
+
   const payload = { message: "If that email exists, a reset link has been sent." };
   if (process.env.NODE_ENV !== "production") {
-    payload.devResetToken = resetToken; // remove once email sending is wired up
+    payload.devResetToken = resetToken; // convenience for local testing only
   }
 
   return res.json(payload);
@@ -142,4 +147,4 @@ async function resetPassword(req, res) {
   return res.json({ message: "Password updated. You can now log in." });
 }
 
-module.exports = { signup, login, me, forgotPassword, resetPassword };
+module.exports = { signup, login, me, forgotPassword, resetPassword }; 
