@@ -35,22 +35,21 @@ export default function VideoPlayer({ videoUrl, title }) {
   }
 
   if (embed) {
-    if (embed.provider === "drive") {
-      return (
-        <div className="w-full rounded-xl overflow-hidden bg-black" style={{ height: "70vh", minHeight: 320, maxHeight: 640 }}>
-          <iframe
-            key={embed.src}
-            src={embed.src}
-            title={title}
-            className="w-full h-full"
-            style={{ border: 0 }}
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-      );
-    }
-
+   if (embed.provider === "drive") {
+  return (
+    <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
+      <iframe
+        key={embed.src}
+        src={embed.src}
+        title={title}
+        className="absolute inset-0 w-full h-full"
+        style={{ border: 0 }}
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  );
+}
     return (
       <div className="relative aspect-video rounded-xl overflow-hidden bg-black">
         <iframe
