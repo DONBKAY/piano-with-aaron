@@ -270,6 +270,88 @@ async function getDashboardStats(req, res) {
   });
 }
 
+// GET /api/admin/students — every student, with enrollment count and total spent
+async function listAllStudents(req, res) {
+  const students = await prisma.user.findMany({
+    where: { role: "STUDENT" },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      createdAt: true,
+      _count: { select: { enrollments: true } },
+    },
+  });
+
+  const withSpend = await Promise.all(
+    students.map(async (s) => {
+      const spendResult = await prisma.payment.aggregate({
+        where: { userId: s.id, status: "SUCCESS" },
+        _sum: { amount: true },
+      });
+      return {
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        joinedAt: s.createdAt,
+        enrollmentCount: s._count.enrollments,
+        totalSpent: spendResult._sum.amount || 0,
+      };
+    })
+  );
+
+  return res.json({ students: withSpend });
+}
+
+// GET /api/admin/payments — every payment across all courses, most recent first
+async function listAllPayments(req, res) {
+  const payments = await prisma.payment.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      user: { select: { name: true, email: true } },
+      course: { select: { title: true } },
+    },
+  });
+
+  return res.json({ payments });
+}
+
+// GET /api/admin/analytics — revenue by month (last 6 months) + top courses by enrollment
+async function getAnalytics(req, res) {
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  const recentPayments = await prisma.payment.findMany({
+    where: { status: "SUCCESS", verifiedAt: { gte: sixMonthsAgo } },
+    select: { amount: true, verifiedAt: true },
+  });
+
+  const monthBuckets = {};
+  for (const p of recentPayments) {
+    const key = p.verifiedAt.toISOString().slice(0, 7); // "2026-07"
+    monthBuckets[key] = (monthBuckets[key] || 0) + Number(p.amount);
+  }
+  const revenueByMonth = Object.entries(monthBuckets)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, revenue]) => ({ month, revenue }));
+
+  const courses = await prisma.course.findMany({
+    select: {
+      title: true,
+      _count: { select: { enrollments: true } },
+    },
+    orderBy: { enrollments: { _count: "desc" } },
+    take: 5,
+  });
+  const topCourses = courses.map((c) => ({
+    title: c.title,
+    enrollments: c._count.enrollments,
+  }));
+
+  return res.json({ revenueByMonth, topCourses });
+}
+
 module.exports = {
   VALID_CATEGORIES,
   listAllCourses,
@@ -286,4 +368,7 @@ module.exports = {
   listCourseEnrollments,
   listValidCategories,
   getDashboardStats,
+  listAllStudents,
+  listAllPayments,
+  getAnalytics,
 };
