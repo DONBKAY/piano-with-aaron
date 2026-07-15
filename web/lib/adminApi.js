@@ -20,6 +20,9 @@ async function request(path, token, options = {}) {
 export const adminApi = {
   categories: (token) => request("/admin/categories", token),
   dashboard: (token) => request("/admin/dashboard", token),
+  students: (token) => request("/admin/students", token),
+  payments: (token) => request("/admin/payments", token),
+  analytics: (token) => request("/admin/analytics", token),
 
   listCourses: (token) => request("/admin/courses", token),
   getCourse: (token, id) => request(`/admin/courses/${id}`, token),
@@ -65,4 +68,4 @@ export function decodeToken(token) {
   } catch {
     return null;
   }
-} 
+}
