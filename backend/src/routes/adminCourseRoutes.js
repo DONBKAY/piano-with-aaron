@@ -16,6 +16,9 @@ const {
   listCourseEnrollments,
   listValidCategories,
   getDashboardStats,
+  listAllStudents,
+  listAllPayments,
+  getAnalytics,
 } = require("../controllers/adminCourseController");
 
 const router = express.Router();
@@ -24,6 +27,9 @@ router.use(requireAuth, requireRole("ADMIN"));
 
 router.get("/dashboard", getDashboardStats);
 router.get("/categories", listValidCategories);
+router.get("/students", listAllStudents);
+router.get("/payments", listAllPayments);
+router.get("/analytics", getAnalytics);
 
 router.get("/courses", listAllCourses);
 router.get("/courses/:id", getCourseById);
