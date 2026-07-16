@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { authApi, saveSession } from "../../lib/api";
 
 export default function LoginPage() {
@@ -14,7 +14,6 @@ export default function LoginPage() {
 }
 
 function LoginInner() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [form, setForm] = useState({
@@ -30,7 +29,6 @@ function LoginInner() {
 
     if (!next) return null;
 
-    // Only permit internal website paths.
     if (!next.startsWith("/") || next.startsWith("//")) {
       return null;
     }
@@ -52,20 +50,18 @@ function LoginInner() {
       const nextUrl = getSafeNextUrl();
 
       if (nextUrl) {
-        router.replace(nextUrl);
+        window.location.href = nextUrl;
         return;
       }
 
       if (data.user.role === "ADMIN") {
-        router.replace("/admin");
-      } else {
-        router.replace("/dashboard");
+        window.location.href = "/admin";
+        return;
       }
 
-      router.refresh();
+      window.location.href = "/dashboard";
     } catch (err) {
       setError(err.message || "Unable to log in");
-    } finally {
       setLoading(false);
     }
   }
