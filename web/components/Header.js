@@ -1,8 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { getToken, clearToken } from "../lib/api";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  authApi,
+  clearToken,
+  getToken,
+  getUser,
+  saveUser,
+} from "../lib/api";
 
 const CATEGORIES = [
   "Beginners Corner",
@@ -14,86 +21,295 @@ const CATEGORIES = [
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  const [loggedIn, setLoggedIn] = useState(false);
+
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [coursesOpen, setCoursesOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+
   const coursesRef = useRef(null);
+  const accountRef = useRef(null);
   const authRef = useRef(null);
 
   useEffect(() => {
-    setLoggedIn(Boolean(getToken()));
+    async function loadUser() {
+      const token = getToken();
+
+      if (!token) {
+        setUser(null);
+        setAuthLoading(false);
+        return;
+      }
+
+      const storedUser = getUser();
+
+      if (storedUser) {
+        setUser(storedUser);
+        setAuthLoading(false);
+        return;
+      }
+
+      try {
+        const currentUser = await authApi.me(token);
+        saveUser(currentUser);
+        setUser(currentUser);
+      } catch {
+        clearToken();
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    }
+
+    loadUser();
   }, [pathname]);
 
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (coursesRef.current && !coursesRef.current.contains(e.target)) {
+    function handleAuthChange() {
+      setUser(getUser());
+    }
+
+    window.addEventListener("pwa-auth-change", handleAuthChange);
+    window.addEventListener("storage", handleAuthChange);
+
+    return () => {
+      window.removeEventListener("pwa-auth-change", handleAuthChange);
+      window.removeEventListener("storage", handleAuthChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        coursesRef.current &&
+        !coursesRef.current.contains(event.target)
+      ) {
         setCoursesOpen(false);
       }
-      if (authRef.current && !authRef.current.contains(e.target)) {
+
+      if (
+        accountRef.current &&
+        !accountRef.current.contains(event.target)
+      ) {
+        setAccountOpen(false);
+      }
+
+      if (authRef.current && !authRef.current.contains(event.target)) {
         setAuthOpen(false);
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
+
+  function closeMenus() {
+    setCoursesOpen(false);
+    setAccountOpen(false);
+    setAuthOpen(false);
+  }
 
   function handleLogout() {
     clearToken();
-    setLoggedIn(false);
-    setAuthOpen(false);
-    router.push("/");
+    setUser(null);
+    closeMenus();
+    router.replace("/");
+    router.refresh();
   }
 
-  return (
-    <header className="sticky top-0 z-50 bg-cream/90 dark:bg-ink/90 backdrop-blur border-b border-gold/20">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <a href="/" className="font-display text-xl tracking-wide">PIANO WITH AARON</a>
+  const dashboardHref =
+    user?.role === "ADMIN" ? "/admin" : "/dashboard";
 
-        <nav className="flex items-center gap-6">
+  return (
+    <header className="sticky top-0 z-50 border-b border-gold/20 bg-cream/90 backdrop-blur dark:bg-ink/90">
+      <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-4 px-4">
+        <Link
+          href="/"
+          onClick={closeMenus}
+          className="font-display text-lg tracking-wide sm:text-xl"
+        >
+          PIANO WITH AARON
+        </Link>
+
+        <nav className="flex items-center gap-3 sm:gap-5">
           <div className="relative" ref={coursesRef}>
-            <button onClick={() => setCoursesOpen((v) => !v)} className="flex items-center gap-1 text-sm font-medium hover:text-gold transition">
+            <button
+              type="button"
+              onClick={() => {
+                setCoursesOpen((current) => !current);
+                setAccountOpen(false);
+                setAuthOpen(false);
+              }}
+              className="flex items-center gap-1 text-sm font-medium transition hover:text-gold"
+            >
               Courses
-              <svg width="10" height="10" viewBox="0 0 10 10" className={`transition-transform ${coursesOpen ? "rotate-180" : ""}`}>
-                <path d="M1 3 L5 7 L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" />
+
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 10 10"
+                className={`transition-transform ${
+                  coursesOpen ? "rotate-180" : ""
+                }`}
+              >
+                <path
+                  d="M1 3 L5 7 L9 3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  fill="none"
+                />
               </svg>
             </button>
+
             {coursesOpen && (
-              <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-deep border border-gold/20 rounded-xl shadow-xl overflow-hidden">
-                {CATEGORIES.map((cat) => (
-                  <a key={cat} href={`/courses?category=${encodeURIComponent(cat)}`} onClick={() => setCoursesOpen(false)}
-                    className="block px-4 py-3 text-sm hover:bg-gold/10 transition">
-                    {cat}
-                  </a>
+              <div className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-gold/20 bg-white shadow-xl dark:bg-deep">
+                {CATEGORIES.map((category) => (
+                  <Link
+                    key={category}
+                    href={`/courses?category=${encodeURIComponent(
+                      category
+                    )}`}
+                    onClick={closeMenus}
+                    className="block px-4 py-3 text-sm transition hover:bg-gold/10"
+                  >
+                    {category}
+                  </Link>
                 ))}
-                <a href="/courses" onClick={() => setCoursesOpen(false)}
-                  className="block px-4 py-3 text-sm border-t border-gold/10 text-gold font-medium hover:bg-gold/10 transition">
+
+                <Link
+                  href="/courses"
+                  onClick={closeMenus}
+                  className="block border-t border-gold/10 px-4 py-3 text-sm font-medium text-gold transition hover:bg-gold/10"
+                >
                   View all courses
-                </a>
+                </Link>
               </div>
             )}
           </div>
 
-          {loggedIn ? (
-            <button onClick={handleLogout} className="px-4 py-2 rounded-lg border border-gold/40 text-sm font-semibold hover:bg-gold/10 transition">
-              Log out
-            </button>
-          ) : (
+          {!authLoading && user ? (
+            <>
+              <Link
+                href={dashboardHref}
+                onClick={closeMenus}
+                className="hidden text-sm font-semibold text-gold hover:underline sm:block"
+              >
+                {user.role === "ADMIN"
+                  ? "Admin Dashboard"
+                  : "My Dashboard"}
+              </Link>
+
+              <div className="relative" ref={accountRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAccountOpen((current) => !current);
+                    setCoursesOpen(false);
+                    setAuthOpen(false);
+                  }}
+                  className="flex items-center gap-2 rounded-lg border border-gold/40 px-3 py-2 text-sm font-semibold transition hover:bg-gold/10"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold text-xs font-bold text-ink">
+                    {user.name?.charAt(0)?.toUpperCase() || "U"}
+                  </span>
+
+                  <span className="hidden max-w-24 truncate md:block">
+                    {user.name}
+                  </span>
+                </button>
+
+                {accountOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-gold/20 bg-white shadow-xl dark:bg-deep">
+                    <div className="border-b border-gold/10 px-4 py-3">
+                      <p className="truncate text-sm font-semibold">
+                        {user.name}
+                      </p>
+
+                      <p className="truncate text-xs opacity-60">
+                        {user.email}
+                      </p>
+                    </div>
+
+                    <Link
+                      href={dashboardHref}
+                      onClick={closeMenus}
+                      className="block px-4 py-3 text-sm transition hover:bg-gold/10"
+                    >
+                      {user.role === "ADMIN"
+                        ? "Admin Dashboard"
+                        : "My Dashboard"}
+                    </Link>
+
+                    {user.role === "STUDENT" && (
+                      <>
+                        <Link
+                          href="/my-courses"
+                          onClick={closeMenus}
+                          className="block px-4 py-3 text-sm transition hover:bg-gold/10"
+                        >
+                          My Courses
+                        </Link>
+
+                        <Link
+                          href="/profile"
+                          onClick={closeMenus}
+                          className="block px-4 py-3 text-sm transition hover:bg-gold/10"
+                        >
+                          My Profile
+                        </Link>
+                      </>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="block w-full border-t border-gold/10 px-4 py-3 text-left text-sm text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/20"
+                    >
+                      Log out
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : !authLoading ? (
             <div className="relative" ref={authRef}>
-              <button onClick={() => setAuthOpen((v) => !v)} className="px-4 py-2 rounded-lg bg-gold text-ink text-sm font-semibold hover:opacity-90 transition">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthOpen((current) => !current);
+                  setCoursesOpen(false);
+                  setAccountOpen(false);
+                }}
+                className="rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-ink transition hover:opacity-90"
+              >
                 Login
               </button>
+
               {authOpen && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-deep border border-gold/20 rounded-xl shadow-xl overflow-hidden">
-                  <a href="/login" onClick={() => setAuthOpen(false)} className="block px-4 py-3 text-sm hover:bg-gold/10 transition font-medium">
+                <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl border border-gold/20 bg-white shadow-xl dark:bg-deep">
+                  <Link
+                    href="/login"
+                    onClick={closeMenus}
+                    className="block px-4 py-3 text-sm font-medium transition hover:bg-gold/10"
+                  >
                     Log in
-                  </a>
-                  <a href="/signup" onClick={() => setAuthOpen(false)} className="block px-4 py-3 text-sm border-t border-gold/10 text-gold hover:bg-gold/10 transition">
+                  </Link>
+
+                  <Link
+                    href="/signup"
+                    onClick={closeMenus}
+                    className="block border-t border-gold/10 px-4 py-3 text-sm text-gold transition hover:bg-gold/10"
+                  >
                     Sign up
-                  </a>
+                  </Link>
                 </div>
               )}
             </div>
-          )}
+          ) : null}
         </nav>
       </div>
     </header>
