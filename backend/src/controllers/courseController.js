@@ -1,7 +1,6 @@
 const prisma = require("../config/db");
 
 // GET /api/courses?category=&subcategory=&search=
-// Public: only returns published courses
 async function listCourses(req, res) {
   const { category, subcategory, search } = req.query;
 
@@ -11,15 +10,27 @@ async function listCourses(req, res) {
     ...(subcategory && { subcategory }),
     ...(search && {
       OR: [
-        { title: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
+        {
+          title: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+        {
+          description: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
       ],
     }),
   };
 
   const courses = await prisma.course.findMany({
     where,
-    orderBy: { createdAt: "desc" },
+    orderBy: {
+      createdAt: "desc",
+    },
     select: {
       id: true,
       title: true,
@@ -30,24 +41,38 @@ async function listCourses(req, res) {
       currency: true,
       category: true,
       subcategory: true,
-      _count: { select: { sections: true, enrollments: true } },
+      _count: {
+        select: {
+          sections: true,
+          enrollments: true,
+        },
+      },
     },
   });
 
   return res.json({ courses });
 }
 
-// GET /api/courses/categories — used to build homepage/nav category cards
+// GET /api/courses/categories
 async function listCategories(req, res) {
   const courses = await prisma.course.findMany({
-    where: { published: true },
-    select: { category: true, subcategory: true },
+    where: {
+      published: true,
+    },
+    select: {
+      category: true,
+      subcategory: true,
+    },
     distinct: ["category", "subcategory"],
   });
 
   const grouped = {};
+
   for (const c of courses) {
-    if (!grouped[c.category]) grouped[c.category] = new Set();
+    if (!grouped[c.category]) {
+      grouped[c.category] = new Set();
+    }
+
     grouped[c.category].add(c.subcategory);
   }
 
@@ -56,24 +81,29 @@ async function listCategories(req, res) {
     subcategories: [...subs],
   }));
 
-  return res.json({ categories: result });
+  return res.json({
+    categories: result,
+  });
 }
 
-// GET /api/courses/:slug — full curriculum. Video URLs are hidden for
-// non-preview lessons unless the requester is enrolled (checked via optional
-// auth) — full enrollment gating on the video itself is enforced again on
-// the lesson-player route in Phase 4, this is a UX-level hide, not the only guard.
+// GET /api/courses/:slug
 async function getCourseBySlug(req, res) {
   const { slug } = req.params;
 
   const course = await prisma.course.findUnique({
-    where: { slug },
+    where: {
+      slug,
+    },
     include: {
       sections: {
-        orderBy: { order: "asc" },
+        orderBy: {
+          order: "asc",
+        },
         include: {
           lessons: {
-            orderBy: { order: "asc" },
+            orderBy: {
+              order: "asc",
+            },
             select: {
               id: true,
               title: true,
@@ -90,60 +120,146 @@ async function getCourseBySlug(req, res) {
   });
 
   if (!course || (!course.published && req.user?.role !== "ADMIN")) {
-    return res.status(404).json({ error: "Course not found" });
+    return res.status(404).json({
+      error: "Course not found",
+    });
   }
 
   let isEnrolled = false;
+
   if (req.user) {
     const enrollment = await prisma.enrollment.findUnique({
-      where: { userId_courseId: { userId: req.user.id, courseId: course.id } },
+      where: {
+        userId_courseId: {
+          userId: req.user.id,
+          courseId: course.id,
+        },
+      },
     });
+
     isEnrolled = Boolean(enrollment) || req.user.role === "ADMIN";
   }
 
-  // Strip video/pdf URLs for lessons the viewer isn't allowed to watch yet
   const sanitized = {
     ...course,
     sections: course.sections.map((section) => ({
       ...section,
       lessons: section.lessons.map((lesson) => ({
         ...lesson,
-        videoUrl: lesson.isPreview || isEnrolled ? lesson.videoUrl : null,
-        pdfUrl: lesson.isPreview || isEnrolled ? lesson.pdfUrl : null,
+        videoUrl:
+          lesson.isPreview || isEnrolled
+            ? lesson.videoUrl
+            : null,
+        pdfUrl:
+          lesson.isPreview || isEnrolled
+            ? lesson.pdfUrl
+            : null,
         locked: !(lesson.isPreview || isEnrolled),
       })),
     })),
   };
 
-  return res.json({ course: sanitized, isEnrolled });
+  return res.json({
+    course: sanitized,
+    isEnrolled,
+  });
 }
 
-// GET /api/courses/me/enrolled  (auth required)
-// Powers "My Courses" — avoids the client having to check enrollment
-// status course-by-course.
+// GET /api/courses/me/enrolled
 async function listMyEnrolledCourses(req, res) {
-  const enrollments = await prisma.enrollment.findMany({
-    where: { userId: req.user.id },
-    include: {
-      course: {
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          description: true,
-          thumbnailUrl: true,
-          price: true,
-          currency: true,
-          category: true,
-          subcategory: true,
-          _count: { select: { sections: true } },
+  try {
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        userId: req.user.id,
+      },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            description: true,
+            thumbnailUrl: true,
+            price: true,
+            currency: true,
+            category: true,
+            subcategory: true,
+
+            sections: {
+              select: {
+                lessons: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-  return res.json({ courses: enrollments.map((e) => e.course) });
+    const completedLessons = await prisma.lessonProgress.findMany({
+      where: {
+        userId: req.user.id,
+        completed: true,
+      },
+      select: {
+        lessonId: true,
+      },
+    });
+
+    const completedSet = new Set(
+      completedLessons.map((l) => l.lessonId)
+    );
+
+    const courses = enrollments.map((enrollment) => {
+      const lessonIds = enrollment.course.sections.flatMap((section) =>
+        section.lessons.map((lesson) => lesson.id)
+      );
+
+      const totalLessons = lessonIds.length;
+
+      const completed = lessonIds.filter((id) =>
+        completedSet.has(id)
+      ).length;
+
+      const percent =
+        totalLessons === 0
+          ? 0
+          : Math.round((completed / totalLessons) * 100);
+
+      const { sections, ...course } = enrollment.course;
+
+      return {
+        ...course,
+        enrolledAt: enrollment.createdAt,
+        progress: {
+          completed,
+          total: totalLessons,
+          percent,
+        },
+      };
+    });
+
+    return res.json({
+      courses,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: "Unable to load enrolled courses",
+    });
+  }
 }
 
-module.exports = { listCourses, listCategories, getCourseBySlug, listMyEnrolledCourses };
+module.exports = {
+  listCourses,
+  listCategories,
+  getCourseBySlug,
+  listMyEnrolledCourses,
+};
