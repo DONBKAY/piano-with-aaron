@@ -137,4 +137,4 @@ model Payment {
   course         Course        @relation(fields: [courseId], references: [id])
 
   @@map("payments")
-}    kindly add and give me the full code
+} 
