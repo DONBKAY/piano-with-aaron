@@ -1,5 +1,5 @@
 // Piano with Aaron — Database Schema
-// Run `npx prisma migrate dev --name add_user_active_status` after setting DATABASE_URL
+// Run `npx prisma migrate dev --name init` after setting DATABASE_URL
 
 generator client {
   provider = "prisma-client-js"
@@ -32,7 +32,6 @@ model User {
   email             String    @unique
   passwordHash      String
   role              Role      @default(STUDENT)
-  isActive          Boolean   @default(true)
   resetToken        String?
   resetTokenExpiry  DateTime?
   createdAt         DateTime  @default(now())
@@ -53,8 +52,8 @@ model Course {
   thumbnailUrl String?
   price        Decimal  @db.Decimal(10, 2)
   currency     Currency @default(GHS)
-  category     String
-  subcategory  String
+  category     String   // e.g. "Beginners Corner", "Intermediate Pathway"
+  subcategory  String   // e.g. "Piano Basics", "Chord Inversions"
   published    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -73,12 +72,7 @@ model Section {
   order     Int      @default(0)
   createdAt DateTime @default(now())
 
-  course    Course   @relation(
-    fields: [courseId],
-    references: [id],
-    onDelete: Cascade
-  )
-
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons   Lesson[]
 
   @@map("sections")
@@ -88,19 +82,14 @@ model Lesson {
   id           String   @id @default(uuid())
   sectionId    String
   title        String
-  videoUrl     String
+  videoUrl     String   // Vimeo / YouTube unlisted / S3 URL
   pdfUrl       String?
   order        Int      @default(0)
-  isPreview    Boolean  @default(false)
+  isPreview    Boolean  @default(false) // free preview lesson
   durationSec  Int?
   createdAt    DateTime @default(now())
 
-  section      Section  @relation(
-    fields: [sectionId],
-    references: [id],
-    onDelete: Cascade
-  )
-
+  section      Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   progress     LessonProgress[]
 
   @@map("lessons")
@@ -112,17 +101,8 @@ model Enrollment {
   courseId   String
   createdAt  DateTime @default(now())
 
-  user       User     @relation(
-    fields: [userId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  course     Course   @relation(
-    fields: [courseId],
-    references: [id],
-    onDelete: Cascade
-  )
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@map("enrollments")
@@ -135,17 +115,8 @@ model LessonProgress {
   completed   Boolean  @default(false)
   completedAt DateTime?
 
-  user        User     @relation(
-    fields: [userId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  lesson      Lesson   @relation(
-    fields: [lessonId],
-    references: [id],
-    onDelete: Cascade
-  )
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonId])
   @@map("lesson_progress")
@@ -162,15 +133,8 @@ model Payment {
   createdAt      DateTime      @default(now())
   verifiedAt     DateTime?
 
-  user           User          @relation(
-    fields: [userId],
-    references: [id]
-  )
-
-  course         Course        @relation(
-    fields: [courseId],
-    references: [id]
-  )
+  user           User          @relation(fields: [userId], references: [id])
+  course         Course        @relation(fields: [courseId], references: [id])
 
   @@map("payments")
-}
+}    kindly add and give me the full code
