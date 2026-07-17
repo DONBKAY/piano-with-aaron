@@ -17,34 +17,42 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "https://piano-with-aaron.vercel.app",
-  process.env.CLIENT_URL,
-].filter(Boolean);
+];
 
-const corsOptions = {
-  origin(origin, callback) {
-    // Allow requests without an Origin header, such as Railway health checks,
-    // Postman, server-to-server requests, and mobile clients.
-    if (!origin) {
-      return callback(null, true);
-    }
+if (process.env.CLIENT_URL) {
+  allowedOrigins.push(process.env.CLIENT_URL.replace(/\/$/, ""));
+}
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ""));
+}
 
-    console.warn(`Blocked by CORS: ${origin}`);
-    return callback(new Error(`CORS blocked origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow requests with no Origin header, such as Railway health checks,
+      // Postman, mobile apps, and server-to-server requests.
+      if (!origin) {
+        return callback(null, true);
+      }
 
-app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions));
+      const normalizedOrigin = origin.replace(/\/$/, "");
 
-// Paystack webhook must be mounted before express.json()
-// because Paystack signature verification needs the raw request body.
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      console.warn(`Blocked CORS origin: ${origin}`);
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Paystack webhook must come before express.json().
+// Paystack signature verification requires the raw request body.
 app.post(
   "/api/payments/webhook",
   express.raw({ type: "application/json" }),
@@ -52,11 +60,20 @@ app.post(
 );
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
+app.get("/", (req, res) => {
+  return res.json({
+    message: "Piano With Aaron API",
+    status: "running",
+  });
+});
+
 app.get("/health", (req, res) => {
-  res.json({
+  return res.status(200).json({
     status: "ok",
+    service: "Piano With Aaron API",
     allowedOrigins,
   });
 });
@@ -69,21 +86,16 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/lessons", lessonRoutes);
 
 app.use((req, res) => {
-  res.status(404).json({
+  return res.status(404).json({
     error: "Route not found",
+    method: req.method,
     path: req.originalUrl,
   });
 });
 
 // Central error handler must remain last.
 app.use((err, req, res, next) => {
-  console.error(err);
-
-  if (err.message?.startsWith("CORS blocked origin")) {
-    return res.status(403).json({
-      error: err.message,
-    });
-  }
+  console.error("Server error:", err);
 
   return res.status(err.status || 500).json({
     error: err.message || "Something went wrong",
