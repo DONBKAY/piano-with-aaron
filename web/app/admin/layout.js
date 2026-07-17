@@ -9,6 +9,7 @@ import { decodeToken } from "../../lib/adminApi";
 export default function AdminLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
+
   const [checked, setChecked] = useState(false);
   const [authorized, setAuthorized] = useState(false);
 
@@ -20,68 +21,122 @@ export default function AdminLayout({ children }) {
       router.push("/login?next=/admin");
       return;
     }
+
     setAuthorized(true);
     setChecked(true);
   }, [router]);
 
   if (!checked) {
     return (
-      <main className="flex items-center justify-center min-h-screen">
-        <p className="text-lg opacity-70">Checking administrator access...</p>
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-lg opacity-70">
+          Checking administrator access...
+        </p>
       </main>
     );
   }
-  if (!authorized) return null;
+
+  if (!authorized) {
+    return null;
+  }
 
   const menuItems = [
-    { title: "Dashboard", href: "/admin", icon: "🏠" },
-    { title: "Courses", href: "/admin/courses", icon: "📚" },
-    { title: "New Course", href: "/admin/new", icon: "➕" },
-    { title: "Students", href: "/admin/students", icon: "👨‍🎓" },
-    { title: "Payments", href: "/admin/payments", icon: "💳" },
-    { title: "Analytics", href: "/admin/analytics", icon: "📈" },
-    { title: "Categories", href: "/admin/categories", icon: "🏷️" },
+    {
+      title: "Dashboard",
+      href: "/admin",
+      icon: "🏠",
+    },
+    {
+      title: "Courses",
+      href: "/admin/courses",
+      icon: "📚",
+    },
+    {
+      title: "New Course",
+      href: "/admin/new",
+      icon: "➕",
+    },
+    {
+      title: "Students",
+      href: "/admin/students",
+      icon: "👨‍🎓",
+    },
+    {
+      title: "Payments",
+      href: "/admin/payments",
+      icon: "💳",
+    },
+    {
+      title: "Reviews",
+      href: "/admin/reviews",
+      icon: "⭐",
+    },
+    {
+      title: "Analytics",
+      href: "/admin/analytics",
+      icon: "📈",
+    },
+    {
+      title: "Categories",
+      href: "/admin/categories",
+      icon: "🏷️",
+    },
   ];
+
+  function isMenuItemActive(href) {
+    if (href === "/admin") {
+      return pathname === "/admin";
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
 
   return (
     <div className="flex min-h-screen bg-cream dark:bg-ink">
-      {/* Sidebar */}
-      <aside className="w-72 border-r border-gold/20 bg-white/60 dark:bg-deep/60">
+      <aside className="w-72 shrink-0 border-r border-gold/20 bg-white/60 dark:bg-deep/60">
         <div className="border-b border-gold/20 px-6 py-6">
-          <h1 className="text-2xl font-bold font-display">Piano With Aaron</h1>
-          <p className="text-sm opacity-60 mt-1">Admin Portal</p>
+          <h1 className="font-display text-2xl font-bold">
+            Piano With Aaron
+          </h1>
+
+          <p className="mt-1 text-sm opacity-60">Admin Portal</p>
         </div>
-        <nav className="p-4 space-y-2">
+
+        <nav className="space-y-2 p-4">
           {menuItems.map((item) => {
-            const active = pathname === item.href;
+            const active = isMenuItemActive(item.href);
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-all ${
                   active
-                    ? "bg-gold/20 text-ink dark:text-cream font-semibold"
+                    ? "bg-gold/20 font-semibold text-ink dark:text-cream"
                     : "hover:bg-gold/10"
                 }`}
               >
-                <span>{item.icon}</span>
+                <span aria-hidden="true">{item.icon}</span>
                 <span>{item.title}</span>
               </Link>
             );
           })}
-          <div className="border-t border-gold/20 my-6" />
+
+          <div className="my-6 border-t border-gold/20" />
+
           <Link
             href="/"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 hover:bg-gold/10 opacity-70"
+            className="flex items-center gap-3 rounded-lg px-4 py-3 opacity-70 hover:bg-gold/10"
           >
-            <span>🌐</span>
+            <span aria-hidden="true">🌐</span>
             <span>Back to Website</span>
           </Link>
         </nav>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-6 md:p-8">{children}</main>
+      <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        {children}
+      </main>
     </div>
   );
 }
