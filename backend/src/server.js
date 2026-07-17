@@ -10,6 +10,8 @@ const courseRoutes = require("./routes/courseRoutes");
 const adminCourseRoutes = require("./routes/adminCourseRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const lessonRoutes = require("./routes/lessonRoutes");
+const reviewRoutes = require("./routes/reviewRoutes"); // NEW
+
 const { handleWebhook } = require("./controllers/paymentController");
 
 const app = express();
@@ -30,8 +32,7 @@ if (process.env.FRONTEND_URL) {
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow requests with no Origin header, such as Railway health checks,
-      // Postman, mobile apps, and server-to-server requests.
+      // Allow Postman, Railway health checks, etc.
       if (!origin) {
         return callback(null, true);
       }
@@ -51,57 +52,89 @@ app.use(
   })
 );
 
-// Paystack webhook must come before express.json().
-// Paystack signature verification requires the raw request body.
+// ------------------------------------------------------------
+// Paystack Webhook
+// MUST come BEFORE express.json()
+// ------------------------------------------------------------
 app.post(
   "/api/payments/webhook",
   express.raw({ type: "application/json" }),
   handleWebhook
 );
 
+// ------------------------------------------------------------
+// Middleware
+// ------------------------------------------------------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
+// ------------------------------------------------------------
+// Home
+// ------------------------------------------------------------
 app.get("/", (req, res) => {
-  return res.json({
+  res.json({
     message: "Piano With Aaron API",
     status: "running",
   });
 });
 
+// ------------------------------------------------------------
+// Health Check
+// ------------------------------------------------------------
 app.get("/health", (req, res) => {
-  return res.status(200).json({
+  res.status(200).json({
     status: "ok",
     service: "Piano With Aaron API",
     allowedOrigins,
   });
 });
 
+// ------------------------------------------------------------
+// API Routes
+// ------------------------------------------------------------
 app.use("/api/auth", authRoutes);
+
 app.use("/api/admin", adminRoutes);
+
 app.use("/api/admin", adminCourseRoutes);
+
 app.use("/api/courses", courseRoutes);
+
 app.use("/api/payments", paymentRoutes);
+
 app.use("/api/lessons", lessonRoutes);
 
+// ===============================
+// Reviews
+// ===============================
+app.use("/api/reviews", reviewRoutes);
+
+// ------------------------------------------------------------
+// 404 Handler
+// ------------------------------------------------------------
 app.use((req, res) => {
-  return res.status(404).json({
+  res.status(404).json({
     error: "Route not found",
     method: req.method,
     path: req.originalUrl,
   });
 });
 
-// Central error handler must remain last.
+// ------------------------------------------------------------
+// Error Handler
+// ------------------------------------------------------------
 app.use((err, req, res, next) => {
   console.error("Server error:", err);
 
-  return res.status(err.status || 500).json({
+  res.status(err.status || 500).json({
     error: err.message || "Something went wrong",
   });
 });
 
+// ------------------------------------------------------------
+// Start Server
+// ------------------------------------------------------------
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, "0.0.0.0", () => {
