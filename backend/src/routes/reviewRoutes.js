@@ -11,89 +11,81 @@ const {
   deleteReviewAsAdmin,
 } = require("../controllers/reviewController");
 
-const {
-  protect,
-  adminOnly,
-} = require("../middleware/authMiddleware");
+const { requireAuth } = require("../middleware/auth");
+const { requireRole } = require("../middleware/role");
 
 const router = express.Router();
 
 /*
 |--------------------------------------------------------------------------
-| Public routes
+| Public Routes
 |--------------------------------------------------------------------------
 */
 
-// Approved reviews displayed on the homepage
-// GET /api/reviews/public
-// GET /api/reviews/public?limit=6
+// Homepage testimonials
 router.get("/public", getPublicReviews);
 
 /*
 |--------------------------------------------------------------------------
-| Student routes
+| Student Routes
 |--------------------------------------------------------------------------
 */
 
-// Get all reviews submitted by the logged-in student
-// GET /api/reviews/my
-router.get("/my", protect, getMyReviews);
+// Get all my reviews
+router.get(
+  "/my",
+  requireAuth,
+  getMyReviews
+);
 
-// Get the logged-in student's review for one course
-// GET /api/reviews/course/:courseId/my
+// Get my review for a course
 router.get(
   "/course/:courseId/my",
-  protect,
+  requireAuth,
   getMyCourseReview
 );
 
-// Submit a new review or update an existing review
-// POST /api/reviews/course/:courseId
+// Submit or update review
 router.post(
   "/course/:courseId",
-  protect,
+  requireAuth,
   submitReview
 );
 
-// Delete the logged-in student's review for a course
-// DELETE /api/reviews/course/:courseId
+// Delete my review
 router.delete(
   "/course/:courseId",
-  protect,
+  requireAuth,
   deleteMyReview
 );
 
 /*
 |--------------------------------------------------------------------------
-| Administrator routes
+| Admin Routes
 |--------------------------------------------------------------------------
 */
 
-// Get all reviews or filter them by status
-// GET /api/reviews/admin
-// GET /api/reviews/admin?status=PENDING
+// View all reviews
 router.get(
   "/admin",
-  protect,
-  adminOnly,
+  requireAuth,
+  requireRole("ADMIN"),
   getAdminReviews
 );
 
-// Approve, reject, or return a review to pending
-// PATCH /api/reviews/admin/:reviewId/status
+// Approve / Reject review
 router.patch(
   "/admin/:reviewId/status",
-  protect,
-  adminOnly,
+  requireAuth,
+  requireRole("ADMIN"),
   updateReviewStatus
 );
 
-// Permanently delete a review
-// DELETE /api/reviews/admin/:reviewId
+// Delete review
 router.delete(
   "/admin/:reviewId",
-  protect,
-  adminOnly,
+  requireAuth,
+  requireRole("ADMIN"),
   deleteReviewAsAdmin
 );
 
