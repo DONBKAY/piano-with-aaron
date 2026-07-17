@@ -106,6 +106,24 @@ export const authApi = {
         Authorization: `Bearer ${token}`,
       },
     }),
+
+  updateProfile: (payload, token) =>
+    request("/auth/profile", {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }),
+
+  changePassword: (payload, token) =>
+    request("/auth/change-password", {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }),
 };
 
 export const paymentApi = {
