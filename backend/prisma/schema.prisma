@@ -1,47 +1,10 @@
-// Piano with Aaron — Database Schema
-// Run `npx prisma migrate dev --name init` after setting DATABASE_URL
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-enum Role {
-  STUDENT
-  ADMIN
-}
-
-enum Currency {
-  GHS
-  USD
-}
-
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
-}
-
-model User {
-  id                String    @id @default(uuid())
-  name              String
-  email             String    @unique
-  passwordHash      String
-  role              Role      @default(STUDENT)
-  resetToken        String?
-  resetTokenExpiry  DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  enrollments       Enrollment[]
-  payments          Payment[]
-  progress          LessonProgress[]
-
-  @@map("users")
+  @@map("categories")
 }
 
 model Course {
@@ -52,89 +15,17 @@ model Course {
   thumbnailUrl String?
   price        Decimal  @db.Decimal(10, 2)
   currency     Currency @default(GHS)
-  category     String   // e.g. "Beginners Corner", "Intermediate Pathway"
-  subcategory  String   // e.g. "Piano Basics", "Chord Inversions"
-  published    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 
-  sections     Section[]
-  enrollments  Enrollment[]
-  payments     Payment[]
+  category    String
+  subcategory String?
+
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sections    Section[]
+  enrollments Enrollment[]
+  payments    Payment[]
 
   @@map("courses")
 }
-
-model Section {
-  id        String   @id @default(uuid())
-  courseId  String
-  title     String
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons   Lesson[]
-
-  @@map("sections")
-}
-
-model Lesson {
-  id           String   @id @default(uuid())
-  sectionId    String
-  title        String
-  videoUrl     String   // Vimeo / YouTube unlisted / S3 URL
-  pdfUrl       String?
-  order        Int      @default(0)
-  isPreview    Boolean  @default(false) // free preview lesson
-  durationSec  Int?
-  createdAt    DateTime @default(now())
-
-  section      Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  progress     LessonProgress[]
-
-  @@map("lessons")
-}
-
-model Enrollment {
-  id         String   @id @default(uuid())
-  userId     String
-  courseId   String
-  createdAt  DateTime @default(now())
-
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, courseId])
-  @@map("enrollments")
-}
-
-model LessonProgress {
-  id          String   @id @default(uuid())
-  userId      String
-  lessonId    String
-  completed   Boolean  @default(false)
-  completedAt DateTime?
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, lessonId])
-  @@map("lesson_progress")
-}
-
-model Payment {
-  id             String        @id @default(uuid())
-  userId         String
-  courseId       String
-  amount         Decimal       @db.Decimal(10, 2)
-  currency       Currency
-  paystackRef    String        @unique
-  status         PaymentStatus @default(PENDING)
-  createdAt      DateTime      @default(now())
-  verifiedAt     DateTime?
-
-  user           User          @relation(fields: [userId], references: [id])
-  course         Course        @relation(fields: [courseId], references: [id])
-
-  @@map("payments")
-} 
