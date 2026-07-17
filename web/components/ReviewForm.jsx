@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getToken } from "../lib/api";
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
@@ -25,28 +26,24 @@ export default function ReviewForm({ courseId }) {
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
-  const getToken = useCallback(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    return localStorage.getItem("token");
-  }, []);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const loadReview = useCallback(async () => {
     if (!courseId) {
-      setLoading(false);
       setError("Course information is missing.");
+      setLoading(false);
       return;
     }
 
     const token = getToken();
 
     if (!token) {
+      setIsLoggedIn(false);
       setLoading(false);
       return;
     }
+
+    setIsLoggedIn(true);
 
     try {
       setLoading(true);
@@ -66,7 +63,7 @@ export default function ReviewForm({ courseId }) {
       const data = await response.json().catch(() => ({}));
 
       if (response.status === 401) {
-        localStorage.removeItem("token");
+        setIsLoggedIn(false);
         setLoading(false);
         return;
       }
@@ -75,10 +72,12 @@ export default function ReviewForm({ courseId }) {
         throw new Error(data.error || "Could not load your review.");
       }
 
-      if (data.review) {
-        setRating(data.review.rating);
-        setComment(data.review.comment);
-        setReviewStatus(data.review.status);
+      const review = data.review || null;
+
+      if (review) {
+        setRating(review.rating);
+        setComment(review.comment || "");
+        setReviewStatus(review.status);
         setHasReview(true);
       } else {
         setRating(0);
@@ -88,11 +87,13 @@ export default function ReviewForm({ courseId }) {
       }
     } catch (requestError) {
       console.error("Load review error:", requestError);
-      setError(requestError.message);
+      setError(
+        requestError.message || "Something went wrong while loading your review."
+      );
     } finally {
       setLoading(false);
     }
-  }, [courseId, getToken]);
+  }, [courseId]);
 
   useEffect(() => {
     loadReview();
@@ -107,6 +108,7 @@ export default function ReviewForm({ courseId }) {
     const token = getToken();
 
     if (!token) {
+      setIsLoggedIn(false);
       setError("Please log in before submitting a review.");
       return;
     }
@@ -117,7 +119,7 @@ export default function ReviewForm({ courseId }) {
     }
 
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      setError("Please select a rating from 1 to 5 stars.");
+      setError("Please select a rating between 1 and 5 stars.");
       return;
     }
 
@@ -154,7 +156,7 @@ export default function ReviewForm({ courseId }) {
       const data = await response.json().catch(() => ({}));
 
       if (response.status === 401) {
-        localStorage.removeItem("token");
+        setIsLoggedIn(false);
         throw new Error("Your session has expired. Please log in again.");
       }
 
@@ -162,9 +164,11 @@ export default function ReviewForm({ courseId }) {
         throw new Error(data.error || "Could not submit your review.");
       }
 
-      setRating(data.review?.rating ?? rating);
-      setComment(data.review?.comment ?? cleanedComment);
-      setReviewStatus(data.review?.status ?? "PENDING");
+      const savedReview = data.review || {};
+
+      setRating(savedReview.rating ?? rating);
+      setComment(savedReview.comment ?? cleanedComment);
+      setReviewStatus(savedReview.status ?? "PENDING");
       setHasReview(true);
 
       setMessage(
@@ -173,7 +177,10 @@ export default function ReviewForm({ courseId }) {
       );
     } catch (requestError) {
       console.error("Submit review error:", requestError);
-      setError(requestError.message);
+      setError(
+        requestError.message ||
+          "Something went wrong while submitting your review."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -183,6 +190,7 @@ export default function ReviewForm({ courseId }) {
     const token = getToken();
 
     if (!token) {
+      setIsLoggedIn(false);
       setError("Please log in again.");
       return;
     }
@@ -213,7 +221,7 @@ export default function ReviewForm({ courseId }) {
       const data = await response.json().catch(() => ({}));
 
       if (response.status === 401) {
-        localStorage.removeItem("token");
+        setIsLoggedIn(false);
         throw new Error("Your session has expired. Please log in again.");
       }
 
@@ -226,10 +234,14 @@ export default function ReviewForm({ courseId }) {
       setComment("");
       setReviewStatus(null);
       setHasReview(false);
+
       setMessage(data.message || "Your review has been deleted.");
     } catch (requestError) {
       console.error("Delete review error:", requestError);
-      setError(requestError.message);
+      setError(
+        requestError.message ||
+          "Something went wrong while deleting your review."
+      );
     } finally {
       setDeleting(false);
     }
@@ -237,23 +249,18 @@ export default function ReviewForm({ courseId }) {
 
   if (loading) {
     return (
-      <section className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-gray-600">Loading your review...</p>
+      <section className="mt-10 rounded-2xl border border-gold/20 bg-white/50 p-6 dark:bg-deep/40">
+        <p className="text-sm opacity-70">Loading your review...</p>
       </section>
     );
   }
 
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-  if (!token) {
+  if (!isLoggedIn) {
     return (
-      <section className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Review this course
-        </h2>
+      <section className="mt-10 rounded-2xl border border-gold/20 bg-white/50 p-6 dark:bg-deep/40">
+        <h2 className="font-display text-2xl">Review this course</h2>
 
-        <p className="mt-2 text-gray-600">
+        <p className="mt-2 opacity-70">
           Please log in to submit a review.
         </p>
       </section>
@@ -261,14 +268,14 @@ export default function ReviewForm({ courseId }) {
   }
 
   return (
-    <section className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <section className="mt-10 rounded-2xl border border-gold/20 bg-white/50 p-6 shadow-sm dark:bg-deep/40">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="font-display text-2xl">
             {hasReview ? "Your review" : "Review this course"}
           </h2>
 
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm opacity-70">
             Share your experience with other piano students.
           </p>
         </div>
@@ -297,12 +304,12 @@ export default function ReviewForm({ courseId }) {
 
       <form onSubmit={handleSubmit}>
         <fieldset disabled={submitting || deleting}>
-          <legend className="mb-2 text-sm font-semibold text-gray-800">
+          <legend className="mb-2 text-sm font-semibold">
             Your rating
           </legend>
 
           <div
-            className="mb-5 flex items-center gap-1"
+            className="mb-5 flex flex-wrap items-center gap-1"
             onMouseLeave={() => setHoveredRating(0)}
           >
             {[1, 2, 3, 4, 5].map((star) => {
@@ -317,8 +324,8 @@ export default function ReviewForm({ courseId }) {
                   onMouseEnter={() => setHoveredRating(star)}
                   className={`text-4xl leading-none transition ${
                     selected
-                      ? "text-yellow-400"
-                      : "text-gray-300 hover:text-yellow-300"
+                      ? "text-gold"
+                      : "text-gray-300 hover:text-gold/60"
                   }`}
                   aria-label={`${star} star${star > 1 ? "s" : ""}`}
                   aria-pressed={rating === star}
@@ -328,14 +335,14 @@ export default function ReviewForm({ courseId }) {
               );
             })}
 
-            <span className="ml-3 text-sm text-gray-600">
+            <span className="ml-2 text-sm opacity-70">
               {rating > 0 ? `${rating} out of 5` : "Select a rating"}
             </span>
           </div>
 
           <label
             htmlFor="review-comment"
-            className="mb-2 block text-sm font-semibold text-gray-800"
+            className="mb-2 block text-sm font-semibold"
           >
             Your comment
           </label>
@@ -347,10 +354,10 @@ export default function ReviewForm({ courseId }) {
             rows={6}
             maxLength={1000}
             placeholder="Tell other students how this course helped you..."
-            className="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-purple-600 focus:ring-2 focus:ring-purple-100"
+            className="w-full resize-y rounded-xl border border-gold/30 bg-white px-4 py-3 text-ink outline-none transition placeholder:opacity-50 focus:border-gold focus:ring-2 focus:ring-gold/20 dark:bg-deep dark:text-white"
           />
 
-          <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+          <div className="mt-1 flex items-center justify-between text-xs opacity-60">
             <span>Minimum 10 characters</span>
             <span>{comment.length}/1000</span>
           </div>
@@ -377,7 +384,7 @@ export default function ReviewForm({ courseId }) {
             <button
               type="submit"
               disabled={submitting || deleting}
-              className="rounded-xl bg-purple-700 px-6 py-3 font-semibold text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-gold px-6 py-3 font-semibold text-ink transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting
                 ? "Submitting..."
@@ -391,7 +398,7 @@ export default function ReviewForm({ courseId }) {
                 type="button"
                 onClick={handleDelete}
                 disabled={submitting || deleting}
-                className="rounded-xl border border-red-300 px-6 py-3 font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-xl border border-red-300 px-6 py-3 font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {deleting ? "Deleting..." : "Delete review"}
               </button>
@@ -400,9 +407,9 @@ export default function ReviewForm({ courseId }) {
         </fieldset>
       </form>
 
-      <p className="mt-4 text-xs leading-5 text-gray-500">
-        New and edited reviews are checked by an administrator before appearing
-        publicly.
+      <p className="mt-4 text-xs leading-5 opacity-60">
+        New and edited reviews must be approved by an administrator before they
+        appear publicly.
       </p>
     </section>
   );
