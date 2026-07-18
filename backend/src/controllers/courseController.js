@@ -1,168 +1,272 @@
 const prisma = require("../config/db");
 
+/**
+ * Calculates the average rating and total approved review count.
+ *
+ * @param {Array<{ rating: number }>} reviews
+ * @returns {{ averageRating: number, reviewCount: number }}
+ */
+function calculateReviewSummary(reviews = []) {
+  const approvedReviews = Array.isArray(reviews) ? reviews : [];
+  const reviewCount = approvedReviews.length;
+
+  if (reviewCount === 0) {
+    return {
+      averageRating: 0,
+      reviewCount: 0,
+    };
+  }
+
+  const totalRating = approvedReviews.reduce(
+    (total, review) => total + Number(review.rating || 0),
+    0
+  );
+
+  return {
+    averageRating: Number((totalRating / reviewCount).toFixed(1)),
+    reviewCount,
+  };
+}
+
+/**
+ * Removes the internal reviews array and adds the public rating summary.
+ *
+ * @param {object} course
+ * @returns {object}
+ */
+function addReviewSummary(course) {
+  const { reviews = [], ...courseWithoutReviews } = course;
+
+  return {
+    ...courseWithoutReviews,
+    ...calculateReviewSummary(reviews),
+  };
+}
+
 // GET /api/courses?category=&subcategory=&search=
 async function listCourses(req, res) {
-  const { category, subcategory, search } = req.query;
+  try {
+    const { category, subcategory, search } = req.query;
 
-  const where = {
-    published: true,
-    ...(category && { category }),
-    ...(subcategory && { subcategory }),
-    ...(search && {
-      OR: [
-        {
-          title: {
-            contains: search,
-            mode: "insensitive",
+    const where = {
+      published: true,
+      ...(category && { category }),
+      ...(subcategory && { subcategory }),
+      ...(search && {
+        OR: [
+          {
+            title: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+          {
+            description: {
+              contains: search,
+              mode: "insensitive",
+            },
+          },
+        ],
+      }),
+    };
+
+    const courses = await prisma.course.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        description: true,
+        thumbnailUrl: true,
+        price: true,
+        currency: true,
+        category: true,
+        subcategory: true,
+
+        reviews: {
+          where: {
+            status: "APPROVED",
+          },
+          select: {
+            rating: true,
           },
         },
-        {
-          description: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-      ],
-    }),
-  };
 
-  const courses = await prisma.course.findMany({
-    where,
-    orderBy: {
-      createdAt: "desc",
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      description: true,
-      thumbnailUrl: true,
-      price: true,
-      currency: true,
-      category: true,
-      subcategory: true,
-      _count: {
-        select: {
-          sections: true,
-          enrollments: true,
+        _count: {
+          select: {
+            sections: true,
+            enrollments: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return res.json({ courses });
+    const coursesWithRatings = courses.map(addReviewSummary);
+
+    return res.json({
+      courses: coursesWithRatings,
+    });
+  } catch (error) {
+    console.error("List courses error:", error);
+
+    return res.status(500).json({
+      error: "Unable to load courses",
+    });
+  }
 }
 
 // GET /api/courses/categories
 async function listCategories(req, res) {
-  const courses = await prisma.course.findMany({
-    where: {
-      published: true,
-    },
-    select: {
-      category: true,
-      subcategory: true,
-    },
-    distinct: ["category", "subcategory"],
-  });
+  try {
+    const courses = await prisma.course.findMany({
+      where: {
+        published: true,
+      },
+      select: {
+        category: true,
+        subcategory: true,
+      },
+      distinct: ["category", "subcategory"],
+    });
 
-  const grouped = {};
+    const grouped = {};
 
-  for (const c of courses) {
-    if (!grouped[c.category]) {
-      grouped[c.category] = new Set();
+    for (const course of courses) {
+      if (!grouped[course.category]) {
+        grouped[course.category] = new Set();
+      }
+
+      if (course.subcategory) {
+        grouped[course.category].add(course.subcategory);
+      }
     }
 
-    grouped[c.category].add(c.subcategory);
+    const result = Object.entries(grouped).map(
+      ([category, subcategories]) => ({
+        category,
+        subcategories: [...subcategories],
+      })
+    );
+
+    return res.json({
+      categories: result,
+    });
+  } catch (error) {
+    console.error("List categories error:", error);
+
+    return res.status(500).json({
+      error: "Unable to load course categories",
+    });
   }
-
-  const result = Object.entries(grouped).map(([category, subs]) => ({
-    category,
-    subcategories: [...subs],
-  }));
-
-  return res.json({
-    categories: result,
-  });
 }
 
 // GET /api/courses/:slug
 async function getCourseBySlug(req, res) {
-  const { slug } = req.params;
+  try {
+    const { slug } = req.params;
 
-  const course = await prisma.course.findUnique({
-    where: {
-      slug,
-    },
-    include: {
-      sections: {
-        orderBy: {
-          order: "asc",
+    const course = await prisma.course.findUnique({
+      where: {
+        slug,
+      },
+      include: {
+        reviews: {
+          where: {
+            status: "APPROVED",
+          },
+          select: {
+            rating: true,
+          },
         },
-        include: {
-          lessons: {
-            orderBy: {
-              order: "asc",
-            },
-            select: {
-              id: true,
-              title: true,
-              order: true,
-              isPreview: true,
-              durationSec: true,
-              videoUrl: true,
-              pdfUrl: true,
+
+        sections: {
+          orderBy: {
+            order: "asc",
+          },
+          include: {
+            lessons: {
+              orderBy: {
+                order: "asc",
+              },
+              select: {
+                id: true,
+                title: true,
+                order: true,
+                isPreview: true,
+                durationSec: true,
+                videoUrl: true,
+                pdfUrl: true,
+              },
             },
           },
         },
       },
-    },
-  });
-
-  if (!course || (!course.published && req.user?.role !== "ADMIN")) {
-    return res.status(404).json({
-      error: "Course not found",
     });
-  }
 
-  let isEnrolled = false;
+    if (!course || (!course.published && req.user?.role !== "ADMIN")) {
+      return res.status(404).json({
+        error: "Course not found",
+      });
+    }
 
-  if (req.user) {
-    const enrollment = await prisma.enrollment.findUnique({
-      where: {
-        userId_courseId: {
-          userId: req.user.id,
-          courseId: course.id,
+    let isEnrolled = false;
+
+    if (req.user) {
+      const enrollment = await prisma.enrollment.findUnique({
+        where: {
+          userId_courseId: {
+            userId: req.user.id,
+            courseId: course.id,
+          },
         },
-      },
-    });
+      });
 
-    isEnrolled = Boolean(enrollment) || req.user.role === "ADMIN";
-  }
+      isEnrolled =
+        Boolean(enrollment) || req.user.role === "ADMIN";
+    }
 
-  const sanitized = {
-    ...course,
-    sections: course.sections.map((section) => ({
-      ...section,
-      lessons: section.lessons.map((lesson) => ({
-        ...lesson,
-        videoUrl:
-          lesson.isPreview || isEnrolled
-            ? lesson.videoUrl
-            : null,
-        pdfUrl:
-          lesson.isPreview || isEnrolled
-            ? lesson.pdfUrl
-            : null,
-        locked: !(lesson.isPreview || isEnrolled),
+    const reviewSummary = calculateReviewSummary(course.reviews);
+    const { reviews, ...courseWithoutReviews } = course;
+
+    const sanitized = {
+      ...courseWithoutReviews,
+      ...reviewSummary,
+
+      sections: courseWithoutReviews.sections.map((section) => ({
+        ...section,
+
+        lessons: section.lessons.map((lesson) => ({
+          ...lesson,
+
+          videoUrl:
+            lesson.isPreview || isEnrolled
+              ? lesson.videoUrl
+              : null,
+
+          pdfUrl:
+            lesson.isPreview || isEnrolled
+              ? lesson.pdfUrl
+              : null,
+
+          locked: !(lesson.isPreview || isEnrolled),
+        })),
       })),
-    })),
-  };
+    };
 
-  return res.json({
-    course: sanitized,
-    isEnrolled,
-  });
+    return res.json({
+      course: sanitized,
+      isEnrolled,
+    });
+  } catch (error) {
+    console.error("Get course by slug error:", error);
+
+    return res.status(500).json({
+      error: "Unable to load course",
+    });
+  }
 }
 
 // GET /api/courses/me/enrolled
@@ -184,6 +288,15 @@ async function listMyEnrolledCourses(req, res) {
             currency: true,
             category: true,
             subcategory: true,
+
+            reviews: {
+              where: {
+                status: "APPROVED",
+              },
+              select: {
+                rating: true,
+              },
+            },
 
             sections: {
               select: {
@@ -213,18 +326,19 @@ async function listMyEnrolledCourses(req, res) {
     });
 
     const completedSet = new Set(
-      completedLessons.map((l) => l.lessonId)
+      completedLessons.map((lesson) => lesson.lessonId)
     );
 
     const courses = enrollments.map((enrollment) => {
-      const lessonIds = enrollment.course.sections.flatMap((section) =>
-        section.lessons.map((lesson) => lesson.id)
+      const lessonIds = enrollment.course.sections.flatMap(
+        (section) =>
+          section.lessons.map((lesson) => lesson.id)
       );
 
       const totalLessons = lessonIds.length;
 
-      const completed = lessonIds.filter((id) =>
-        completedSet.has(id)
+      const completed = lessonIds.filter((lessonId) =>
+        completedSet.has(lessonId)
       ).length;
 
       const percent =
@@ -232,11 +346,18 @@ async function listMyEnrolledCourses(req, res) {
           ? 0
           : Math.round((completed / totalLessons) * 100);
 
-      const { sections, ...course } = enrollment.course;
+      const {
+        sections,
+        reviews,
+        ...courseWithoutInternalData
+      } = enrollment.course;
 
       return {
-        ...course,
+        ...courseWithoutInternalData,
+        ...calculateReviewSummary(reviews),
+
         enrolledAt: enrollment.createdAt,
+
         progress: {
           completed,
           total: totalLessons,
@@ -249,7 +370,7 @@ async function listMyEnrolledCourses(req, res) {
       courses,
     });
   } catch (error) {
-    console.error(error);
+    console.error("List enrolled courses error:", error);
 
     return res.status(500).json({
       error: "Unable to load enrolled courses",
