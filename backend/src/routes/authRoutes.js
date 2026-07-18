@@ -1,9 +1,14 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
-const { requireAuth } = require("../middleware/auth");
+
+const {
+  requireAuth,
+  requireAdmin,
+} = require("../middleware/auth");
 
 const {
   signup,
+  createAdmin,
   login,
   me,
   updateProfile,
@@ -14,31 +19,71 @@ const {
 
 const router = express.Router();
 
-// Limit brute-force attempts on auth endpoints
+// General protection against repeated authentication attempts
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
     error: "Too many attempts, please try again later.",
   },
 });
 
+// Stronger limit for creating administrator accounts
+const createAdminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Too many administrator creation attempts. Please try again later.",
+  },
+});
+
+// Public authentication routes
 router.post("/signup", authLimiter, signup);
 router.post("/login", authLimiter, login);
 
-router.post("/forgot-password", authLimiter, forgotPassword);
-router.post("/reset-password", authLimiter, resetPassword);
+router.post(
+  "/forgot-password",
+  authLimiter,
+  forgotPassword
+);
 
-// Protected routes
-router.get("/me", requireAuth, me);
+router.post(
+  "/reset-password",
+  authLimiter,
+  resetPassword
+);
 
-router.put("/profile", requireAuth, updateProfile);
+// Protected user routes
+router.get(
+  "/me",
+  requireAuth,
+  me
+);
+
+router.put(
+  "/profile",
+  requireAuth,
+  updateProfile
+);
 
 router.put(
   "/change-password",
   requireAuth,
   authLimiter,
   changePassword
+);
+
+// Admin-only route for registering another administrator
+router.post(
+  "/admins",
+  requireAuth,
+  requireAdmin,
+  createAdminLimiter,
+  createAdmin
 );
 
 module.exports = router;
