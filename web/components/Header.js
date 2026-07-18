@@ -74,7 +74,11 @@ export default function Header() {
     window.addEventListener("storage", handleAuthChange);
 
     return () => {
-      window.removeEventListener("pwa-auth-change", handleAuthChange);
+      window.removeEventListener(
+        "pwa-auth-change",
+        handleAuthChange
+      );
+
       window.removeEventListener("storage", handleAuthChange);
     };
   }, []);
@@ -95,7 +99,10 @@ export default function Header() {
         setAccountOpen(false);
       }
 
-      if (authRef.current && !authRef.current.contains(event.target)) {
+      if (
+        authRef.current &&
+        !authRef.current.contains(event.target)
+      ) {
         setAuthOpen(false);
       }
     }
@@ -103,7 +110,10 @@ export default function Header() {
     document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
     };
   }, []);
 
@@ -121,16 +131,27 @@ export default function Header() {
     router.refresh();
   }
 
+  function linkClass(href) {
+    const active =
+      pathname === href || pathname.startsWith(`${href}/`);
+
+    return `text-sm font-medium transition ${
+      active
+        ? "text-gold"
+        : "text-ink hover:text-gold dark:text-cream"
+    }`;
+  }
+
   const dashboardHref =
     user?.role === "ADMIN" ? "/admin" : "/dashboard";
 
   return (
     <header className="sticky top-0 z-50 border-b border-gold/20 bg-cream/90 backdrop-blur dark:bg-ink/90">
-      <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-4 px-4">
+      <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-4">
         <Link
           href="/"
           onClick={closeMenus}
-          className="font-display text-lg tracking-wide sm:text-xl"
+          className="shrink-0 font-display text-base tracking-wide sm:text-xl"
         >
           PIANO WITH AARON
         </Link>
@@ -144,7 +165,13 @@ export default function Header() {
                 setAccountOpen(false);
                 setAuthOpen(false);
               }}
-              className="flex items-center gap-1 text-sm font-medium transition hover:text-gold"
+              className={`flex items-center gap-1 text-sm font-medium transition hover:text-gold ${
+                pathname.startsWith("/courses")
+                  ? "text-gold"
+                  : ""
+              }`}
+              aria-expanded={coursesOpen}
+              aria-haspopup="menu"
             >
               Courses
 
@@ -155,6 +182,7 @@ export default function Header() {
                 className={`transition-transform ${
                   coursesOpen ? "rotate-180" : ""
                 }`}
+                aria-hidden="true"
               >
                 <path
                   d="M1 3 L5 7 L9 3"
@@ -166,7 +194,10 @@ export default function Header() {
             </button>
 
             {coursesOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-gold/20 bg-white shadow-xl dark:bg-deep">
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-2 w-60 overflow-hidden rounded-xl border border-gold/20 bg-white shadow-xl dark:bg-deep"
+              >
                 {CATEGORIES.map((category) => (
                   <Link
                     key={category}
@@ -187,9 +218,25 @@ export default function Header() {
                 >
                   View all courses
                 </Link>
+
+                <Link
+                  href="/about"
+                  onClick={closeMenus}
+                  className="block border-t border-gold/10 px-4 py-3 text-sm transition hover:bg-gold/10 md:hidden"
+                >
+                  About Aaron
+                </Link>
               </div>
             )}
           </div>
+
+          <Link
+            href="/about"
+            onClick={closeMenus}
+            className={`${linkClass("/about")} hidden md:block`}
+          >
+            About
+          </Link>
 
           {!authLoading && user ? (
             <>
@@ -212,6 +259,8 @@ export default function Header() {
                     setAuthOpen(false);
                   }}
                   className="flex items-center gap-2 rounded-lg border border-gold/40 px-3 py-2 text-sm font-semibold transition hover:bg-gold/10"
+                  aria-expanded={accountOpen}
+                  aria-haspopup="menu"
                 >
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold text-xs font-bold text-ink">
                     {user.name?.charAt(0)?.toUpperCase() || "U"}
@@ -223,7 +272,10 @@ export default function Header() {
                 </button>
 
                 {accountOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-gold/20 bg-white shadow-xl dark:bg-deep">
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-gold/20 bg-white shadow-xl dark:bg-deep"
+                  >
                     <div className="border-b border-gold/10 px-4 py-3">
                       <p className="truncate text-sm font-semibold">
                         {user.name}
@@ -242,6 +294,14 @@ export default function Header() {
                       {user.role === "ADMIN"
                         ? "Admin Dashboard"
                         : "My Dashboard"}
+                    </Link>
+
+                    <Link
+                      href="/about"
+                      onClick={closeMenus}
+                      className="block px-4 py-3 text-sm transition hover:bg-gold/10 md:hidden"
+                    >
+                      About Aaron
                     </Link>
 
                     {user.role === "STUDENT" && (
@@ -285,12 +345,17 @@ export default function Header() {
                   setAccountOpen(false);
                 }}
                 className="rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-ink transition hover:opacity-90"
+                aria-expanded={authOpen}
+                aria-haspopup="menu"
               >
                 Login
               </button>
 
               {authOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl border border-gold/20 bg-white shadow-xl dark:bg-deep">
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl border border-gold/20 bg-white shadow-xl dark:bg-deep"
+                >
                   <Link
                     href="/login"
                     onClick={closeMenus}
@@ -305,6 +370,14 @@ export default function Header() {
                     className="block border-t border-gold/10 px-4 py-3 text-sm text-gold transition hover:bg-gold/10"
                   >
                     Sign up
+                  </Link>
+
+                  <Link
+                    href="/about"
+                    onClick={closeMenus}
+                    className="block border-t border-gold/10 px-4 py-3 text-sm transition hover:bg-gold/10 md:hidden"
+                  >
+                    About Aaron
                   </Link>
                 </div>
               )}
