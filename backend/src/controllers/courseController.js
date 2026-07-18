@@ -1,7 +1,7 @@
 const prisma = require("../config/db");
 
 /**
- * Calculates the average rating and total approved review count.
+ * Calculates the average rating and approved review count.
  *
  * @param {Array<{ rating: number }>} reviews
  * @returns {{ averageRating: number, reviewCount: number }}
@@ -29,7 +29,9 @@ function calculateReviewSummary(reviews = []) {
 }
 
 /**
- * Removes the internal reviews array and adds the public rating summary.
+ * Removes the internal reviews array and adds rating information.
+ *
+ * Used for course lists where full review comments are not needed.
  *
  * @param {object} course
  * @returns {object}
@@ -50,8 +52,15 @@ async function listCourses(req, res) {
 
     const where = {
       published: true,
-      ...(category && { category }),
-      ...(subcategory && { subcategory }),
+
+      ...(category && {
+        category,
+      }),
+
+      ...(subcategory && {
+        subcategory,
+      }),
+
       ...(search && {
         OR: [
           {
@@ -72,9 +81,11 @@ async function listCourses(req, res) {
 
     const courses = await prisma.course.findMany({
       where,
+
       orderBy: {
         createdAt: "desc",
       },
+
       select: {
         id: true,
         title: true,
@@ -106,7 +117,7 @@ async function listCourses(req, res) {
 
     const coursesWithRatings = courses.map(addReviewSummary);
 
-    return res.json({
+    return res.status(200).json({
       courses: coursesWithRatings,
     });
   } catch (error) {
@@ -125,16 +136,22 @@ async function listCategories(req, res) {
       where: {
         published: true,
       },
+
       select: {
         category: true,
         subcategory: true,
       },
+
       distinct: ["category", "subcategory"],
     });
 
     const grouped = {};
 
     for (const course of courses) {
+      if (!course.category) {
+        continue;
+      }
+
       if (!grouped[course.category]) {
         grouped[course.category] = new Set();
       }
@@ -151,7 +168,7 @@ async function listCategories(req, res) {
       })
     );
 
-    return res.json({
+    return res.status(200).json({
       categories: result,
     });
   } catch (error) {
@@ -172,13 +189,28 @@ async function getCourseBySlug(req, res) {
       where: {
         slug,
       },
+
       include: {
         reviews: {
           where: {
             status: "APPROVED",
           },
+
+          orderBy: {
+            createdAt: "desc",
+          },
+
           select: {
+            id: true,
             rating: true,
+            comment: true,
+            createdAt: true,
+
+            user: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
 
@@ -186,11 +218,13 @@ async function getCourseBySlug(req, res) {
           orderBy: {
             order: "asc",
           },
+
           include: {
             lessons: {
               orderBy: {
                 order: "asc",
               },
+
               select: {
                 id: true,
                 title: true,
@@ -229,34 +263,36 @@ async function getCourseBySlug(req, res) {
     }
 
     const reviewSummary = calculateReviewSummary(course.reviews);
-    const { reviews, ...courseWithoutReviews } = course;
 
     const sanitized = {
-      ...courseWithoutReviews,
+      ...course,
       ...reviewSummary,
 
-      sections: courseWithoutReviews.sections.map((section) => ({
+      sections: course.sections.map((section) => ({
         ...section,
 
-        lessons: section.lessons.map((lesson) => ({
-          ...lesson,
+        lessons: section.lessons.map((lesson) => {
+          const canAccessLesson =
+            lesson.isPreview || isEnrolled;
 
-          videoUrl:
-            lesson.isPreview || isEnrolled
+          return {
+            ...lesson,
+
+            videoUrl: canAccessLesson
               ? lesson.videoUrl
               : null,
 
-          pdfUrl:
-            lesson.isPreview || isEnrolled
+            pdfUrl: canAccessLesson
               ? lesson.pdfUrl
               : null,
 
-          locked: !(lesson.isPreview || isEnrolled),
-        })),
+            locked: !canAccessLesson,
+          };
+        }),
       })),
     };
 
-    return res.json({
+    return res.status(200).json({
       course: sanitized,
       isEnrolled,
     });
@@ -276,6 +312,7 @@ async function listMyEnrolledCourses(req, res) {
       where: {
         userId: req.user.id,
       },
+
       include: {
         course: {
           select: {
@@ -310,30 +347,33 @@ async function listMyEnrolledCourses(req, res) {
           },
         },
       },
+
       orderBy: {
         createdAt: "desc",
       },
     });
 
-    const completedLessons = await prisma.lessonProgress.findMany({
-      where: {
-        userId: req.user.id,
-        completed: true,
-      },
-      select: {
-        lessonId: true,
-      },
-    });
+    const completedLessons =
+      await prisma.lessonProgress.findMany({
+        where: {
+          userId: req.user.id,
+          completed: true,
+        },
+
+        select: {
+          lessonId: true,
+        },
+      });
 
     const completedSet = new Set(
       completedLessons.map((lesson) => lesson.lessonId)
     );
 
     const courses = enrollments.map((enrollment) => {
-      const lessonIds = enrollment.course.sections.flatMap(
-        (section) =>
+      const lessonIds =
+        enrollment.course.sections.flatMap((section) =>
           section.lessons.map((lesson) => lesson.id)
-      );
+        );
 
       const totalLessons = lessonIds.length;
 
@@ -344,7 +384,9 @@ async function listMyEnrolledCourses(req, res) {
       const percent =
         totalLessons === 0
           ? 0
-          : Math.round((completed / totalLessons) * 100);
+          : Math.round(
+              (completed / totalLessons) * 100
+            );
 
       const {
         sections,
@@ -366,7 +408,7 @@ async function listMyEnrolledCourses(req, res) {
       };
     });
 
-    return res.json({
+    return res.status(200).json({
       courses,
     });
   } catch (error) {
