@@ -1,137 +1,61 @@
 import Image from "next/image";
 import Link from "next/link";
 
-const achievements = [
+export const metadata = {
+  title: "About Aaron | Piano With Aaron",
+  description:
+    "Meet Aaron, a gospel piano instructor helping students understand chords, play by ear and play confidently.",
+};
+
+const statistics = [
   {
-    value: "300+",
-    label: "Students Taught",
-    description: "Helping aspiring pianists learn with confidence",
-    icon: "students",
+    number: "300+",
+    title: "Students Taught",
+    text: "Helping students learn piano with confidence.",
   },
   {
-    value: "Since 2016",
-    label: "Teaching Piano",
-    description: "Years of practical teaching experience",
-    icon: "calendar",
+    number: "2016",
+    title: "Teaching Since",
+    text: "Years of practical piano teaching experience.",
   },
   {
-    value: "Since 2007",
-    label: "Playing Piano",
-    description: "A lifelong journey of learning and musicianship",
-    icon: "piano",
+    number: "2007",
+    title: "Piano Journey",
+    text: "Learning, playing and growing as a musician.",
   },
   {
-    value: "Gospel",
-    label: "Piano Focus",
-    description: "Chords, progressions, accompaniment and playing by ear",
-    icon: "music",
+    number: "Gospel",
+    title: "Piano Focus",
+    text: "Chords, progressions and playing by ear.",
   },
 ];
 
 const learningPoints = [
-  "Identify and understand piano chords",
-  "Form major, minor and other useful chords",
-  "Play common gospel chord progressions",
+  "Identify major and minor chords",
+  "Understand chord formation",
+  "Play gospel chord progressions",
   "Develop your ability to play by ear",
   "Accompany singers and worship teams",
   "Play confidently without depending on memorization",
 ];
 
-const teachingValues = [
+const teachingPrinciples = [
   {
+    number: "01",
     title: "Simple Explanations",
-    text: "Lessons are broken into clear steps so that difficult musical ideas become easier to understand.",
+    text: "Musical concepts are broken into clear and manageable steps so that learning does not feel overwhelming.",
   },
   {
-    title: "Practical Learning",
-    text: "You will apply each concept directly on the piano instead of learning theory without practice.",
+    number: "02",
+    title: "Practical Lessons",
+    text: "Every concept is demonstrated directly on the piano so you can immediately apply what you learn.",
   },
   {
+    number: "03",
     title: "Independent Playing",
-    text: "The goal is to help you identify chords, understand progressions and play confidently by yourself.",
+    text: "The goal is to help you understand chords and progressions well enough to play confidently by yourself.",
   },
 ];
-
-function Icon({ type }) {
-  if (type === "students") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="h-7 w-7"
-        aria-hidden="true"
-      >
-        <path
-          d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
-  if (type === "calendar") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="h-7 w-7"
-        aria-hidden="true"
-      >
-        <path
-          d="M7 3v4M17 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
-  if (type === "piano") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="h-7 w-7"
-        aria-hidden="true"
-      >
-        <path
-          d="M3 5h18v14H3V5Zm4 0v9m5-9v9m5-9v9M7 14h3v5H7v-5Zm5 0h3v5h-3v-5Z"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      className="h-7 w-7"
-      aria-hidden="true"
-    >
-      <path
-        d="M9 18V5l11-2v13M9 9l11-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm11-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export const metadata = {
-  title: "About Aaron | Piano With Aaron",
-  description:
-    "Meet Aaron, a gospel piano instructor helping students understand chords, play by ear and become confident independent pianists.",
-};
 
 export default function AboutPage() {
   return (
@@ -147,14 +71,14 @@ export default function AboutPage() {
           }}
         />
 
-        <div className="relative mx-auto grid min-h-[720px] max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-20">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-4 py-16 sm:px-6 lg:min-h-[760px] lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-20">
           <div className="relative mx-auto w-full max-w-xl lg:mx-0">
-            <div className="absolute -inset-4 rounded-[2rem] bg-gold/10 blur-2xl" />
+            <div className="absolute -inset-5 rounded-[2rem] bg-gold/10 blur-3xl" />
 
             <div className="relative overflow-hidden rounded-[2rem] border border-gold/30 bg-deep shadow-2xl">
               <div className="relative aspect-[4/5]">
                 <Image
-                  src="/images/aaron-piano-about.jpg"
+                  src="/images/aaron-piano-about.jpeg"
                   alt="Aaron playing the piano"
                   fill
                   priority
@@ -162,23 +86,28 @@ export default function AboutPage() {
                   className="object-cover object-center"
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
 
-                <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold">
+                <div className="absolute bottom-0 left-0 right-0 p-7">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold">
                     Gospel Piano Instructor
                   </p>
 
-                  <p className="mt-2 font-display text-2xl font-bold text-white">
+                  <p className="mt-2 font-display text-3xl font-bold text-white">
                     Aaron
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="absolute -bottom-6 -right-2 rounded-2xl border border-gold/30 bg-deep/95 px-5 py-4 shadow-xl backdrop-blur sm:right-[-24px]">
-              <p className="text-2xl font-bold text-gold">300+</p>
-              <p className="text-sm text-cream/70">Students taught</p>
+            <div className="absolute -bottom-6 right-2 rounded-2xl border border-gold/30 bg-deep/95 px-6 py-4 shadow-xl backdrop-blur sm:-right-6">
+              <p className="font-display text-3xl font-bold text-gold">
+                300+
+              </p>
+
+              <p className="text-sm text-cream/65">
+                Students taught
+              </p>
             </div>
           </div>
 
@@ -188,28 +117,27 @@ export default function AboutPage() {
               Meet Your Instructor
             </p>
 
-            <h1 className="mt-6 font-display text-5xl font-bold leading-[1.05] sm:text-6xl lg:text-7xl">
-              Hi, I&apos;m{" "}
-              <span className="text-gold">Aaron</span>
+            <h1 className="mt-6 font-display text-5xl font-bold leading-tight sm:text-6xl lg:text-7xl">
+              Hi, I&apos;m <span className="text-gold">Aaron</span>
             </h1>
 
-            <p className="mt-4 text-lg font-medium text-cream/75 sm:text-xl">
+            <p className="mt-4 text-lg font-medium text-cream/70 sm:text-xl">
               Gospel Piano Instructor • Educator • Mentor
             </p>
 
-            <div className="mt-8 space-y-5 text-base leading-8 text-cream/75 sm:text-lg">
+            <div className="mt-8 space-y-5 text-base leading-8 text-cream/70 sm:text-lg">
               <p>
                 I began learning the piano in{" "}
                 <strong className="text-cream">2007</strong>, driven by
-                a passion for music and a desire to understand how
-                chords, melodies and progressions work together.
+                a passion for music and a desire to understand chords,
+                melodies and progressions.
               </p>
 
               <p>
                 In <strong className="text-gold">2016</strong>, I began
                 teaching after realizing that many people wanted to
-                learn piano but needed a simpler and more practical
-                way to understand it.
+                learn piano but needed a simpler and more practical way
+                to understand it.
               </p>
 
               <p>
@@ -222,7 +150,7 @@ export default function AboutPage() {
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <Link
                 href="/courses"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-6 py-3.5 font-bold text-ink transition hover:-translate-y-0.5 hover:brightness-105"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-7 py-4 font-bold text-ink transition hover:-translate-y-0.5 hover:brightness-105"
               >
                 Explore Courses
                 <span aria-hidden="true">→</span>
@@ -232,7 +160,7 @@ export default function AboutPage() {
                 href="https://www.youtube.com/@PIANOTUTORIALS-GH"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-3 rounded-xl border border-cream/25 px-6 py-3.5 font-semibold text-cream transition hover:border-gold hover:text-gold"
+                className="inline-flex items-center justify-center gap-3 rounded-xl border border-cream/25 px-7 py-4 font-semibold transition hover:border-gold hover:text-gold"
               >
                 <span
                   className="flex h-7 w-7 items-center justify-center rounded-full bg-cream text-xs text-ink"
@@ -249,25 +177,19 @@ export default function AboutPage() {
 
       <section className="border-b border-gold/20 bg-black/20">
         <div className="mx-auto grid max-w-7xl gap-px bg-gold/20 sm:grid-cols-2 lg:grid-cols-4">
-          {achievements.map((achievement) => (
+          {statistics.map((item) => (
             <article
-              key={achievement.label}
-              className="bg-ink px-6 py-8 text-center"
+              key={item.title}
+              className="bg-ink px-6 py-9 text-center"
             >
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-gold/35 bg-gold/10 text-gold">
-                <Icon type={achievement.icon} />
-              </div>
-
-              <p className="mt-5 font-display text-3xl font-bold text-gold">
-                {achievement.value}
+              <p className="font-display text-4xl font-bold text-gold">
+                {item.number}
               </p>
 
-              <h2 className="mt-2 font-semibold">
-                {achievement.label}
-              </h2>
+              <h2 className="mt-3 font-semibold">{item.title}</h2>
 
               <p className="mt-2 text-sm leading-6 text-cream/55">
-                {achievement.description}
+                {item.text}
               </p>
             </article>
           ))}
@@ -276,21 +198,21 @@ export default function AboutPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="grid gap-6 lg:grid-cols-3">
-          {teachingValues.map((value, index) => (
+          {teachingPrinciples.map((principle) => (
             <article
-              key={value.title}
-              className="rounded-2xl border border-gold/20 bg-deep/60 p-7 transition hover:-translate-y-1 hover:border-gold/40"
+              key={principle.title}
+              className="rounded-2xl border border-gold/20 bg-deep/60 p-7 transition hover:-translate-y-1 hover:border-gold/45"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gold font-bold text-ink">
-                {String(index + 1).padStart(2, "0")}
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gold font-bold text-ink">
+                {principle.number}
               </div>
 
               <h2 className="mt-6 font-display text-2xl font-bold">
-                {value.title}
+                {principle.title}
               </h2>
 
               <p className="mt-4 leading-7 text-cream/65">
-                {value.text}
+                {principle.text}
               </p>
             </article>
           ))}
@@ -300,7 +222,7 @@ export default function AboutPage() {
       <section className="border-y border-gold/20 bg-deep/40">
         <div className="mx-auto grid max-w-7xl gap-14 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:px-8">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-gold">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-gold">
               My Story
             </p>
 
@@ -324,20 +246,20 @@ export default function AboutPage() {
               </p>
 
               <p>
-                Piano With Aaron was created to give students a learning
-                path that moves from basic understanding to confident,
-                independent playing.
+                Piano With Aaron was created to give students a clear
+                learning path that moves from basic understanding to
+                confident and independent playing.
               </p>
             </div>
           </div>
 
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-gold">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-gold">
               My Mission
             </p>
 
             <h2 className="mt-4 font-display text-4xl font-bold">
-              Helping you play by yourself
+              Helping students play independently
             </h2>
 
             <p className="mt-7 leading-8 text-cream/70">
@@ -347,9 +269,9 @@ export default function AboutPage() {
             </p>
 
             <blockquote className="mt-8 rounded-2xl border-l-4 border-gold bg-gold/10 p-6">
-              <p className="font-display text-xl leading-8 text-cream">
-                “I want every student to understand what they are
-                playing, identify chords and confidently play the piano
+              <p className="font-display text-xl leading-8">
+                “I want every student to identify chords, understand
+                what they are playing and confidently play the piano
                 independently.”
               </p>
 
@@ -363,7 +285,7 @@ export default function AboutPage() {
 
       <section className="mx-auto grid max-w-7xl gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-gold">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-gold">
             What You Will Learn
           </p>
 
@@ -372,9 +294,9 @@ export default function AboutPage() {
           </h2>
 
           <p className="mt-6 max-w-xl leading-8 text-cream/65">
-            Each course is designed to take you beyond memorizing
-            songs. You will learn musical principles that can be
-            applied to different keys, songs and playing situations.
+            The lessons take you beyond memorizing songs. You will
+            learn musical principles that can be applied in different
+            keys, songs and playing situations.
           </p>
 
           <Link
@@ -407,7 +329,7 @@ export default function AboutPage() {
 
       <section className="px-4 pb-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl border border-gold/35 bg-gradient-to-r from-gold/15 via-deep to-gold/10 px-6 py-12 text-center sm:px-10 lg:px-16">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-gold">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-gold">
             Begin Today
           </p>
 
@@ -424,7 +346,7 @@ export default function AboutPage() {
           <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
             <Link
               href="/courses"
-              className="rounded-xl bg-gold px-7 py-3.5 font-bold text-ink transition hover:brightness-105"
+              className="rounded-xl bg-gold px-8 py-4 font-bold text-ink transition hover:brightness-105"
             >
               Start Learning
             </Link>
@@ -433,7 +355,7 @@ export default function AboutPage() {
               href="https://wa.me/233248632153"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-xl border border-cream/25 px-7 py-3.5 font-semibold transition hover:border-gold hover:text-gold"
+              className="rounded-xl border border-cream/25 px-8 py-4 font-semibold transition hover:border-gold hover:text-gold"
             >
               Contact Aaron
             </a>
