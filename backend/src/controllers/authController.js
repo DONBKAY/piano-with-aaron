@@ -6,6 +6,33 @@ const { sendPasswordResetEmail } = require("../services/emailService");
 
 const SALT_ROUNDS = 12;
 
+function formatUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
+function validatePassword(password) {
+  if (!password) {
+    return "Password is required";
+  }
+
+  if (password.length < 8) {
+    return "Password must be at least 8 characters";
+  }
+
+  if (password.length > 128) {
+    return "Password must not exceed 128 characters";
+  }
+
+  return null;
+}
+
 async function signup(req, res) {
   try {
     const { name, email, password } = req.body;
@@ -14,15 +41,29 @@ async function signup(req, res) {
     const cleanEmail = email?.trim().toLowerCase();
 
     if (!cleanName || !cleanEmail || !password) {
-      return res
-        .status(400)
-        .json({ error: "Name, email, and password are required" });
+      return res.status(400).json({
+        error: "Name, email, and password are required",
+      });
     }
 
-    if (password.length < 8) {
-      return res
-        .status(400)
-        .json({ error: "Password must be at least 8 characters" });
+    if (cleanName.length < 2) {
+      return res.status(400).json({
+        error: "Name must be at least 2 characters",
+      });
+    }
+
+    if (cleanName.length > 100) {
+      return res.status(400).json({
+        error: "Name must not exceed 100 characters",
+      });
+    }
+
+    const passwordError = validatePassword(password);
+
+    if (passwordError) {
+      return res.status(400).json({
+        error: passwordError,
+      });
     }
 
     const existing = await prisma.user.findUnique({
@@ -30,9 +71,9 @@ async function signup(req, res) {
     });
 
     if (existing) {
-      return res
-        .status(409)
-        .json({ error: "An account with this email already exists" });
+      return res.status(409).json({
+        error: "An account with this email already exists",
+      });
     }
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
@@ -49,19 +90,99 @@ async function signup(req, res) {
     const token = signToken(user);
 
     return res.status(201).json({
+      message: "Student account created successfully",
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: formatUser(user),
     });
   } catch (error) {
     console.error("Signup error:", error);
 
     return res.status(500).json({
       error: "Unable to create account",
+    });
+  }
+}
+
+async function createAdmin(req, res) {
+  try {
+    const { name, email, password, confirmPassword } = req.body;
+
+    const cleanName = name?.trim();
+    const cleanEmail = email?.trim().toLowerCase();
+
+    if (!cleanName || !cleanEmail || !password) {
+      return res.status(400).json({
+        error: "Name, email, and password are required",
+      });
+    }
+
+    if (cleanName.length < 2) {
+      return res.status(400).json({
+        error: "Name must be at least 2 characters",
+      });
+    }
+
+    if (cleanName.length > 100) {
+      return res.status(400).json({
+        error: "Name must not exceed 100 characters",
+      });
+    }
+
+    const passwordError = validatePassword(password);
+
+    if (passwordError) {
+      return res.status(400).json({
+        error: passwordError,
+      });
+    }
+
+    if (
+      typeof confirmPassword === "string" &&
+      password !== confirmPassword
+    ) {
+      return res.status(400).json({
+        error: "Passwords do not match",
+      });
+    }
+
+    const existing = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        error: "An account with this email already exists",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+    const admin = await prisma.user.create({
+      data: {
+        name: cleanName,
+        email: cleanEmail,
+        passwordHash,
+        role: "ADMIN",
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.status(201).json({
+      message: "Administrator account created successfully",
+      user: admin,
+    });
+  } catch (error) {
+    console.error("Create admin error:", error);
+
+    return res.status(500).json({
+      error: "Unable to create administrator account",
     });
   }
 }
@@ -73,9 +194,9 @@ async function login(req, res) {
     const cleanEmail = email?.trim().toLowerCase();
 
     if (!cleanEmail || !password) {
-      return res
-        .status(400)
-        .json({ error: "Email and password are required" });
+      return res.status(400).json({
+        error: "Email and password are required",
+      });
     }
 
     const user = await prisma.user.findUnique({
@@ -100,12 +221,7 @@ async function login(req, res) {
 
     return res.json({
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: formatUser(user),
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -136,14 +252,7 @@ async function me(req, res) {
       });
     }
 
-    return res.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    });
+    return res.json(user);
   } catch (error) {
     console.error("Get profile error:", error);
 
@@ -225,9 +334,11 @@ async function changePassword(req, res) {
       });
     }
 
-    if (newPassword.length < 8) {
+    const passwordError = validatePassword(newPassword);
+
+    if (passwordError) {
       return res.status(400).json({
-        error: "New password must be at least 8 characters",
+        error: passwordError.replace("Password", "New password"),
       });
     }
 
@@ -279,9 +390,6 @@ async function changePassword(req, res) {
   }
 }
 
-// Generates a reset token, emails it to the user via SMTP, and — outside
-// production only — also returns the token directly so the flow can still
-// be tested locally without a real inbox.
 async function forgotPassword(req, res) {
   try {
     const { email } = req.body;
@@ -298,7 +406,6 @@ async function forgotPassword(req, res) {
       where: { email: cleanEmail },
     });
 
-    // Always return a generic response to avoid revealing registered emails.
     if (!user) {
       return res.json({
         message: "If that email exists, a reset link has been sent.",
@@ -306,6 +413,7 @@ async function forgotPassword(req, res) {
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
+
     const expiryMinutes = Number(
       process.env.RESET_TOKEN_EXPIRY_MINUTES || 30
     );
@@ -355,9 +463,11 @@ async function resetPassword(req, res) {
       });
     }
 
-    if (newPassword.length < 8) {
+    const passwordError = validatePassword(newPassword);
+
+    if (passwordError) {
       return res.status(400).json({
-        error: "Password must be at least 8 characters",
+        error: passwordError,
       });
     }
 
@@ -404,6 +514,7 @@ async function resetPassword(req, res) {
 
 module.exports = {
   signup,
+  createAdmin,
   login,
   me,
   updateProfile,
