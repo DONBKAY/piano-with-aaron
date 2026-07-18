@@ -10,7 +10,8 @@ const courseRoutes = require("./routes/courseRoutes");
 const adminCourseRoutes = require("./routes/adminCourseRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const lessonRoutes = require("./routes/lessonRoutes");
-const reviewRoutes = require("./routes/reviewRoutes"); // NEW
+const reviewRoutes = require("./routes/reviewRoutes");
+const certificateRoutes = require("./routes/certificateRoutes");
 
 const { handleWebhook } = require("./controllers/paymentController");
 
@@ -32,7 +33,8 @@ if (process.env.FRONTEND_URL) {
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow Postman, Railway health checks, etc.
+      // Allow requests without a browser origin,
+      // including Postman and Railway health checks.
       if (!origin) {
         return callback(null, true);
       }
@@ -54,7 +56,7 @@ app.use(
 
 // ------------------------------------------------------------
 // Paystack Webhook
-// MUST come BEFORE express.json()
+// MUST come before express.json()
 // ------------------------------------------------------------
 app.post(
   "/api/payments/webhook",
@@ -105,10 +107,15 @@ app.use("/api/payments", paymentRoutes);
 
 app.use("/api/lessons", lessonRoutes);
 
-// ===============================
+// ------------------------------------------------------------
 // Reviews
-// ===============================
+// ------------------------------------------------------------
 app.use("/api/reviews", reviewRoutes);
+
+// ------------------------------------------------------------
+// Certificates
+// ------------------------------------------------------------
+app.use("/api/certificates", certificateRoutes);
 
 // ------------------------------------------------------------
 // 404 Handler
