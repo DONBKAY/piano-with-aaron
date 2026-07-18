@@ -5,49 +5,55 @@ const {
   getCourseCertificateStatus,
   listMyCertificates,
   verifyCertificate,
+  downloadCertificate,
 } = require("../controllers/certificateController");
 
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
-/*
-|--------------------------------------------------------------------------
-| Public Routes
-|--------------------------------------------------------------------------
-*/
-
-// Verify a certificate by its unique certificate code.
+// ------------------------------------------------------------
+// Public certificate verification
+// ------------------------------------------------------------
 router.get(
   "/verify/:certificateCode",
   verifyCertificate
 );
 
-/*
-|--------------------------------------------------------------------------
-| Student Routes
-|--------------------------------------------------------------------------
-*/
-
-// Get all certificates belonging to the logged-in student.
+// ------------------------------------------------------------
+// Logged-in student's certificates
+// ------------------------------------------------------------
 router.get(
   "/my",
   requireAuth,
   listMyCertificates
 );
 
-// Check whether a student is eligible for a certificate.
+// ------------------------------------------------------------
+// Certificate status for a course
+// ------------------------------------------------------------
 router.get(
   "/course/:courseId/status",
   requireAuth,
   getCourseCertificateStatus
 );
 
-// Issue a certificate once the course is completed.
+// ------------------------------------------------------------
+// Issue certificate after course completion
+// ------------------------------------------------------------
 router.post(
   "/course/:courseId/issue",
   requireAuth,
   issueCertificate
+);
+
+// ------------------------------------------------------------
+// Download certificate PDF
+// ------------------------------------------------------------
+router.get(
+  "/:certificateCode/download",
+  requireAuth,
+  downloadCertificate
 );
 
 module.exports = router;
