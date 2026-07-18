@@ -1,10 +1,11 @@
 const crypto = require("crypto");
+const PDFDocument = require("pdfkit");
+const QRCode = require("qrcode");
+
 const prisma = require("../config/db");
 
 /**
- * Creates a unique, readable certificate code.
- *
- * Example:
+ * Example certificate code:
  * PWA-2026-7F3A91BC
  */
 function generateCertificateCode() {
@@ -14,9 +15,23 @@ function generateCertificateCode() {
   return `PWA-${year}-${randomPart}`;
 }
 
-/**
- * Calculates the student's completion progress for a course.
- */
+function getFrontendUrl() {
+  const frontendUrl =
+    process.env.FRONTEND_URL ||
+    process.env.CLIENT_URL ||
+    "http://localhost:3000";
+
+  return frontendUrl.replace(/\/$/, "");
+}
+
+function formatCertificateDate(date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
 async function calculateCourseProgress(userId, courseId) {
   const course = await prisma.course.findUnique({
     where: {
@@ -85,9 +100,30 @@ async function calculateCourseProgress(userId, courseId) {
   };
 }
 
-/**
- * Creates a certificate using a unique code.
- */
+const certificateSelect = {
+  id: true,
+  certificateCode: true,
+  issuedAt: true,
+  createdAt: true,
+  user: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  course: {
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      thumbnailUrl: true,
+      category: true,
+      subcategory: true,
+    },
+  },
+};
+
 async function createCertificateWithUniqueCode(userId, courseId) {
   const maximumAttempts = 5;
 
@@ -101,32 +137,10 @@ async function createCertificateWithUniqueCode(userId, courseId) {
           userId,
           courseId,
         },
-        select: {
-          id: true,
-          certificateCode: true,
-          issuedAt: true,
-          createdAt: true,
-          user: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          course: {
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              thumbnailUrl: true,
-            },
-          },
-        },
+        select: certificateSelect,
       });
     } catch (error) {
-      const isUniqueConstraintError =
-        error?.code === "P2002";
-
-      if (!isUniqueConstraintError) {
+      if (error?.code !== "P2002") {
         throw error;
       }
 
@@ -138,26 +152,7 @@ async function createCertificateWithUniqueCode(userId, courseId) {
               courseId,
             },
           },
-          select: {
-            id: true,
-            certificateCode: true,
-            issuedAt: true,
-            createdAt: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            course: {
-              select: {
-                id: true,
-                title: true,
-                slug: true,
-                thumbnailUrl: true,
-              },
-            },
-          },
+          select: certificateSelect,
         });
 
       if (existingCertificate) {
@@ -171,11 +166,6 @@ async function createCertificateWithUniqueCode(userId, courseId) {
 
 /**
  * POST /api/certificates/course/:courseId/issue
- *
- * Issues a certificate after confirming:
- * - the student is enrolled;
- * - the course contains lessons;
- * - every lesson has been completed.
  */
 async function issueCertificate(req, res) {
   try {
@@ -190,26 +180,7 @@ async function issueCertificate(req, res) {
             courseId,
           },
         },
-        select: {
-          id: true,
-          certificateCode: true,
-          issuedAt: true,
-          createdAt: true,
-          user: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          course: {
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              thumbnailUrl: true,
-            },
-          },
-        },
+        select: certificateSelect,
       });
 
     if (existingCertificate) {
@@ -290,9 +261,6 @@ async function issueCertificate(req, res) {
 
 /**
  * GET /api/certificates/course/:courseId/status
- *
- * Returns the student's certificate status and progress
- * for a particular course.
  */
 async function getCourseCertificateStatus(req, res) {
   try {
@@ -325,19 +293,7 @@ async function getCourseCertificateStatus(req, res) {
             courseId,
           },
         },
-        select: {
-          id: true,
-          certificateCode: true,
-          issuedAt: true,
-          createdAt: true,
-          course: {
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-            },
-          },
-        },
+        select: certificateSelect,
       });
 
     const progress = await calculateCourseProgress(
@@ -379,8 +335,6 @@ async function getCourseCertificateStatus(req, res) {
 
 /**
  * GET /api/certificates/my
- *
- * Returns all certificates belonging to the logged-in student.
  */
 async function listMyCertificates(req, res) {
   try {
@@ -389,22 +343,7 @@ async function listMyCertificates(req, res) {
         where: {
           userId: req.user.id,
         },
-        select: {
-          id: true,
-          certificateCode: true,
-          issuedAt: true,
-          createdAt: true,
-          course: {
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              thumbnailUrl: true,
-              category: true,
-              subcategory: true,
-            },
-          },
-        },
+        select: certificateSelect,
         orderBy: {
           issuedAt: "desc",
         },
@@ -424,10 +363,64 @@ async function listMyCertificates(req, res) {
 
 /**
  * GET /api/certificates/verify/:certificateCode
- *
- * Public endpoint for certificate verification.
  */
 async function verifyCertificate(req, res) {
+  try {
+    const certificateCode = String(
+      req.params.certificateCode || ""
+    )
+      .trim()
+      .toUpperCase();
+
+    if (!certificateCode) {
+      return res.status(400).json({
+        valid: false,
+        error: "Certificate code is required",
+      });
+    }
+
+    const certificate =
+      await prisma.certificate.findUnique({
+        where: {
+          certificateCode,
+        },
+        select: certificateSelect,
+      });
+
+    if (!certificate) {
+      return res.status(404).json({
+        valid: false,
+        error: "Certificate not found",
+      });
+    }
+
+    return res.status(200).json({
+      valid: true,
+      certificate: {
+        certificateCode: certificate.certificateCode,
+        studentName: certificate.user.name,
+        courseTitle: certificate.course.title,
+        courseSlug: certificate.course.slug,
+        category: certificate.course.category,
+        issuedAt: certificate.issuedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Verify certificate error:", error);
+
+    return res.status(500).json({
+      valid: false,
+      error: "Unable to verify certificate",
+    });
+  }
+}
+
+/**
+ * GET /api/certificates/:certificateCode/download
+ *
+ * Generates and downloads a student's certificate as a PDF.
+ */
+async function downloadCertificate(req, res) {
   try {
     const certificateCode = String(
       req.params.certificateCode || ""
@@ -446,48 +439,319 @@ async function verifyCertificate(req, res) {
         where: {
           certificateCode,
         },
-        select: {
-          id: true,
-          certificateCode: true,
-          issuedAt: true,
-          user: {
-            select: {
-              name: true,
-            },
-          },
-          course: {
-            select: {
-              title: true,
-              slug: true,
-            },
-          },
-        },
+        select: certificateSelect,
       });
 
     if (!certificate) {
       return res.status(404).json({
-        valid: false,
         error: "Certificate not found",
       });
     }
 
-    return res.status(200).json({
-      valid: true,
-      certificate: {
-        certificateCode: certificate.certificateCode,
-        studentName: certificate.user.name,
-        courseTitle: certificate.course.title,
-        courseSlug: certificate.course.slug,
-        issuedAt: certificate.issuedAt,
+    if (certificate.user.id !== req.user.id) {
+      return res.status(403).json({
+        error: "You are not allowed to download this certificate",
+      });
+    }
+
+    const verificationUrl =
+      `${getFrontendUrl()}/certificates/verify/` +
+      encodeURIComponent(certificate.certificateCode);
+
+    const qrDataUrl = await QRCode.toDataURL(verificationUrl, {
+      errorCorrectionLevel: "H",
+      margin: 1,
+      width: 300,
+    });
+
+    const qrCodeBuffer = Buffer.from(
+      qrDataUrl.split(",")[1],
+      "base64"
+    );
+
+    const safeFilename = certificate.course.title
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${safeFilename || "course"}-certificate.pdf"`
+    );
+    res.setHeader("Cache-Control", "private, no-store");
+
+    const document = new PDFDocument({
+      size: "A4",
+      layout: "landscape",
+      margin: 0,
+      info: {
+        Title: `Certificate of Completion - ${certificate.course.title}`,
+        Author: "Piano With Aaron",
+        Subject: "Course Completion Certificate",
+        Keywords:
+          "Piano With Aaron, certificate, piano course, completion",
       },
     });
-  } catch (error) {
-    console.error("Verify certificate error:", error);
 
-    return res.status(500).json({
-      valid: false,
-      error: "Unable to verify certificate",
+    document.on("error", (error) => {
+      console.error("Certificate PDF stream error:", error);
+
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: "Unable to generate certificate PDF",
+        });
+      } else {
+        res.end();
+      }
     });
+
+    document.pipe(res);
+
+    const pageWidth = document.page.width;
+    const pageHeight = document.page.height;
+
+    // Background
+    document
+      .rect(0, 0, pageWidth, pageHeight)
+      .fill("#FFFDF7");
+
+    // Outer border
+    document
+      .lineWidth(8)
+      .strokeColor("#1E293B")
+      .rect(22, 22, pageWidth - 44, pageHeight - 44)
+      .stroke();
+
+    // Gold inner border
+    document
+      .lineWidth(3)
+      .strokeColor("#C59D35")
+      .rect(35, 35, pageWidth - 70, pageHeight - 70)
+      .stroke();
+
+    // Decorative corner lines
+    document
+      .lineWidth(1)
+      .strokeColor("#C59D35");
+
+    document
+      .moveTo(55, 70)
+      .lineTo(180, 70)
+      .stroke();
+
+    document
+      .moveTo(pageWidth - 180, 70)
+      .lineTo(pageWidth - 55, 70)
+      .stroke();
+
+    document
+      .moveTo(55, pageHeight - 70)
+      .lineTo(180, pageHeight - 70)
+      .stroke();
+
+    document
+      .moveTo(pageWidth - 180, pageHeight - 70)
+      .lineTo(pageWidth - 55, pageHeight - 70)
+      .stroke();
+
+    // Brand
+    document
+      .fillColor("#C59D35")
+      .font("Helvetica-Bold")
+      .fontSize(18)
+      .text("PIANO WITH AARON", 0, 65, {
+        width: pageWidth,
+        align: "center",
+        characterSpacing: 2,
+      });
+
+    document
+      .fillColor("#1E293B")
+      .font("Helvetica-Bold")
+      .fontSize(38)
+      .text("CERTIFICATE", 0, 105, {
+        width: pageWidth,
+        align: "center",
+        characterSpacing: 3,
+      });
+
+    document
+      .fillColor("#64748B")
+      .font("Helvetica")
+      .fontSize(17)
+      .text("OF COURSE COMPLETION", 0, 153, {
+        width: pageWidth,
+        align: "center",
+        characterSpacing: 2,
+      });
+
+    document
+      .fillColor("#475569")
+      .font("Helvetica")
+      .fontSize(15)
+      .text("This certificate is proudly presented to", 0, 203, {
+        width: pageWidth,
+        align: "center",
+      });
+
+    // Student name
+    document
+      .fillColor("#0F172A")
+      .font("Helvetica-BoldOblique")
+      .fontSize(34)
+      .text(certificate.user.name, 100, 237, {
+        width: pageWidth - 200,
+        align: "center",
+      });
+
+    document
+      .lineWidth(1)
+      .strokeColor("#C59D35")
+      .moveTo(190, 283)
+      .lineTo(pageWidth - 190, 283)
+      .stroke();
+
+    document
+      .fillColor("#475569")
+      .font("Helvetica")
+      .fontSize(15)
+      .text(
+        "for successfully completing the piano course",
+        0,
+        303,
+        {
+          width: pageWidth,
+          align: "center",
+        }
+      );
+
+    document
+      .fillColor("#1E293B")
+      .font("Helvetica-Bold")
+      .fontSize(25)
+      .text(certificate.course.title, 120, 336, {
+        width: pageWidth - 240,
+        align: "center",
+      });
+
+    document
+      .fillColor("#64748B")
+      .font("Helvetica")
+      .fontSize(12)
+      .text(
+        "Awarded in recognition of dedication, discipline, and successful completion of all course requirements.",
+        145,
+        379,
+        {
+          width: pageWidth - 290,
+          align: "center",
+          lineGap: 4,
+        }
+      );
+
+    // Issue date
+    document
+      .fillColor("#1E293B")
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text(
+        formatCertificateDate(certificate.issuedAt),
+        95,
+        463,
+        {
+          width: 200,
+          align: "center",
+        }
+      );
+
+    document
+      .lineWidth(1)
+      .strokeColor("#64748B")
+      .moveTo(115, 482)
+      .lineTo(275, 482)
+      .stroke();
+
+    document
+      .fillColor("#64748B")
+      .font("Helvetica")
+      .fontSize(10)
+      .text("DATE OF ISSUE", 95, 490, {
+        width: 200,
+        align: "center",
+      });
+
+    // Instructor signature area
+    document
+      .fillColor("#1E293B")
+      .font("Helvetica-BoldOblique")
+      .fontSize(18)
+      .text("Aaron", pageWidth - 315, 457, {
+        width: 200,
+        align: "center",
+      });
+
+    document
+      .lineWidth(1)
+      .strokeColor("#64748B")
+      .moveTo(pageWidth - 295, 482)
+      .lineTo(pageWidth - 135, 482)
+      .stroke();
+
+    document
+      .fillColor("#64748B")
+      .font("Helvetica")
+      .fontSize(10)
+      .text("COURSE INSTRUCTOR", pageWidth - 315, 490, {
+        width: 200,
+        align: "center",
+      });
+
+    // QR code
+    const qrSize = 74;
+    const qrX = pageWidth / 2 - qrSize / 2;
+    const qrY = 447;
+
+    document.image(qrCodeBuffer, qrX, qrY, {
+      width: qrSize,
+      height: qrSize,
+    });
+
+    document
+      .fillColor("#64748B")
+      .font("Helvetica")
+      .fontSize(7)
+      .text("SCAN TO VERIFY", qrX - 8, qrY + qrSize + 3, {
+        width: qrSize + 16,
+        align: "center",
+      });
+
+    // Certificate code
+    document
+      .fillColor("#475569")
+      .font("Helvetica")
+      .fontSize(8)
+      .text(
+        `Certificate ID: ${certificate.certificateCode}`,
+        0,
+        pageHeight - 48,
+        {
+          width: pageWidth,
+          align: "center",
+        }
+      );
+
+    document.end();
+  } catch (error) {
+    console.error("Download certificate error:", error);
+
+    if (!res.headersSent) {
+      return res.status(500).json({
+        error: "Unable to generate certificate PDF",
+      });
+    }
+
+    return res.end();
   }
 }
 
@@ -496,4 +760,5 @@ module.exports = {
   getCourseCertificateStatus,
   listMyCertificates,
   verifyCertificate,
+  downloadCertificate,
 };
