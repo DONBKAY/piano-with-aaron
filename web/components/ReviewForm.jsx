@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getToken } from "../lib/api";
 
 const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
 ).replace(/\/$/, "");
 
 const STATUS_LABELS = {
@@ -50,7 +50,7 @@ export default function ReviewForm({ courseId }) {
       setError("");
 
       const response = await fetch(
-        `${API_URL}/api/reviews/course/${courseId}/my`,
+        `${API_URL}/reviews/course/${courseId}/my`,
         {
           method: "GET",
           headers: {
@@ -64,8 +64,7 @@ export default function ReviewForm({ courseId }) {
 
       if (response.status === 401) {
         setIsLoggedIn(false);
-        setLoading(false);
-        return;
+        throw new Error("Your session has expired. Please log in again.");
       }
 
       if (!response.ok) {
@@ -75,9 +74,9 @@ export default function ReviewForm({ courseId }) {
       const review = data.review || null;
 
       if (review) {
-        setRating(review.rating);
+        setRating(Number(review.rating) || 0);
         setComment(review.comment || "");
-        setReviewStatus(review.status);
+        setReviewStatus(review.status || null);
         setHasReview(true);
       } else {
         setRating(0);
@@ -87,8 +86,10 @@ export default function ReviewForm({ courseId }) {
       }
     } catch (requestError) {
       console.error("Load review error:", requestError);
+
       setError(
-        requestError.message || "Something went wrong while loading your review."
+        requestError.message ||
+          "Something went wrong while loading your review."
       );
     } finally {
       setLoading(false);
@@ -139,7 +140,7 @@ export default function ReviewForm({ courseId }) {
       setSubmitting(true);
 
       const response = await fetch(
-        `${API_URL}/api/reviews/course/${courseId}`,
+        `${API_URL}/reviews/course/${courseId}`,
         {
           method: "POST",
           headers: {
@@ -160,15 +161,21 @@ export default function ReviewForm({ courseId }) {
         throw new Error("Your session has expired. Please log in again.");
       }
 
+      if (response.status === 403) {
+        throw new Error(
+          data.error || "Only enrolled students can review this course."
+        );
+      }
+
       if (!response.ok) {
         throw new Error(data.error || "Could not submit your review.");
       }
 
       const savedReview = data.review || {};
 
-      setRating(savedReview.rating ?? rating);
-      setComment(savedReview.comment ?? cleanedComment);
-      setReviewStatus(savedReview.status ?? "PENDING");
+      setRating(Number(savedReview.rating) || rating);
+      setComment(savedReview.comment || cleanedComment);
+      setReviewStatus(savedReview.status || "PENDING");
       setHasReview(true);
 
       setMessage(
@@ -177,6 +184,7 @@ export default function ReviewForm({ courseId }) {
       );
     } catch (requestError) {
       console.error("Submit review error:", requestError);
+
       setError(
         requestError.message ||
           "Something went wrong while submitting your review."
@@ -209,7 +217,7 @@ export default function ReviewForm({ courseId }) {
       setError("");
 
       const response = await fetch(
-        `${API_URL}/api/reviews/course/${courseId}`,
+        `${API_URL}/reviews/course/${courseId}`,
         {
           method: "DELETE",
           headers: {
@@ -238,6 +246,7 @@ export default function ReviewForm({ courseId }) {
       setMessage(data.message || "Your review has been deleted.");
     } catch (requestError) {
       console.error("Delete review error:", requestError);
+
       setError(
         requestError.message ||
           "Something went wrong while deleting your review."
