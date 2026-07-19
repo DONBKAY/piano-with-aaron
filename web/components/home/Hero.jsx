@@ -80,7 +80,7 @@ function PianoIcon() {
 function StatCard({ className, icon, value, label }) {
   return (
     <div
-      className={`absolute z-20 rounded-2xl border border-gold/35 bg-black/90 px-4 py-4 text-cream shadow-2xl backdrop-blur-md ${className}`}
+      className={`absolute z-30 rounded-2xl border border-gold/40 bg-black/90 px-4 py-4 text-cream shadow-2xl backdrop-blur-md ${className}`}
     >
       <div className="flex items-center gap-3">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold">
@@ -104,8 +104,9 @@ function StatCard({ className, icon, value, label }) {
 export default function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-gold/20 bg-ink text-cream">
+      {/* Global faint grid */}
       <div
-        className="absolute inset-0 opacity-[0.055]"
+        className="absolute inset-0 opacity-[0.04]"
         aria-hidden="true"
         style={{
           backgroundImage:
@@ -114,78 +115,59 @@ export default function Hero() {
         }}
       />
 
+      {/* Left-side glow */}
       <div
-        className="absolute left-0 top-1/3 h-80 w-80 rounded-full bg-gold/10 blur-[130px]"
+        className="absolute left-[8%] top-1/3 h-96 w-96 rounded-full bg-gold/10 blur-[140px]"
         aria-hidden="true"
       />
 
+      {/* Piano background behind the words */}
       <div
-        className="absolute bottom-0 right-0 top-0 hidden w-[58%] lg:block"
+        className="absolute bottom-0 right-0 top-0 hidden w-[59%] overflow-hidden lg:block"
         aria-hidden="true"
       >
-        <div className="absolute inset-0 bg-gradient-to-l from-gold/[0.07] via-gold/[0.025] to-transparent" />
-
-        <div
-          className="absolute inset-0 opacity-[0.13]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 70% 30%, rgba(212,175,55,0.8) 0 1px, transparent 2px), radial-gradient(circle at 30% 70%, rgba(212,175,55,0.5) 0 1px, transparent 2px)",
-            backgroundSize: "46px 46px, 64px 64px",
-          }}
+        <Image
+          src="/images/piano-hero.jpg"
+          alt=""
+          fill
+          priority
+          sizes="60vw"
+          className="object-cover object-left opacity-[0.22]"
         />
 
-        <svg
-          viewBox="0 0 900 700"
-          preserveAspectRatio="none"
-          className="absolute inset-0 h-full w-full opacity-[0.14]"
-        >
-          <path
-            d="M-50 470 C140 350 220 610 430 440 C610 290 730 390 960 210"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="text-gold"
-          />
+        {/* Darkens image so the text remains readable */}
+        <div className="absolute inset-0 bg-black/38" />
 
-          <path
-            d="M-40 500 C170 380 250 640 450 470 C640 310 770 420 970 250"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            className="text-gold"
-          />
+        {/* Fade image into the portrait side */}
+        <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/35 to-black/5" />
 
-          <path
-            d="M80 190 C270 60 400 250 570 155 C700 80 810 110 940 35"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            className="text-gold"
-          />
+        {/* Fade top and bottom edges */}
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/35 via-transparent to-ink/45" />
 
-          <g
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-            className="text-gold"
-            opacity="0.6"
-          >
-            <path d="M540 410v135" />
-            <path d="M575 394v151" />
-            <path d="M610 375v170" />
-            <path d="M645 355v190" />
-            <path d="M680 335v210" />
-            <path d="M715 315v230" />
-            <path d="M750 295v250" />
-            <path d="M785 275v270" />
-            <path d="M820 255v290" />
-          </g>
-        </svg>
+        {/* Subtle gold tint */}
+        <div className="absolute inset-0 bg-gold/[0.035] mix-blend-screen" />
+      </div>
 
-        <div className="absolute inset-0 bg-gradient-to-r from-ink via-transparent to-black/20" />
+      {/* Mobile piano background */}
+      <div
+        className="absolute inset-0 lg:hidden"
+        aria-hidden="true"
+      >
+        <Image
+          src="/images/piano-hero.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center opacity-[0.09]"
+        />
+
+        <div className="absolute inset-0 bg-ink/88" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/60 via-transparent to-ink" />
       </div>
 
       <div className="relative mx-auto grid min-h-[760px] max-w-7xl items-center gap-16 px-4 py-20 sm:px-6 lg:grid-cols-[0.88fr_1.12fr] lg:px-8">
+        {/* Portrait section */}
         <div className="relative order-2 mx-auto w-full max-w-[500px] lg:order-1">
           <div
             className="absolute inset-12 rounded-full bg-gold/20 blur-[90px]"
@@ -204,7 +186,7 @@ export default function Hero() {
             ))}
           </div>
 
-          <div className="relative mx-auto w-[84%] overflow-hidden rounded-[2rem] border border-gold/55 bg-deep shadow-2xl shadow-black/60 sm:w-[78%] lg:w-[82%]">
+          <div className="relative mx-auto w-[84%] overflow-hidden rounded-[2rem] border border-gold/60 bg-deep shadow-2xl shadow-black/60 sm:w-[78%] lg:w-[82%]">
             <div className="relative aspect-[4/5]">
               <Image
                 src="/images/aaron-piano-about.jpeg"
@@ -215,7 +197,7 @@ export default function Hero() {
                 className="object-cover object-center"
               />
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/5" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/5" />
             </div>
           </div>
 
@@ -241,9 +223,10 @@ export default function Hero() {
           />
         </div>
 
-        <div className="relative z-10 order-1 lg:order-2">
+        {/* Text section */}
+        <div className="relative z-20 order-1 lg:order-2">
           <div className="inline-flex items-center gap-4">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gold/10 text-gold">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gold/10 text-gold backdrop-blur-sm">
               <PianoIcon />
             </span>
 
@@ -257,14 +240,14 @@ export default function Hero() {
             />
           </div>
 
-          <h1 className="mt-7 max-w-3xl font-display text-5xl font-bold leading-[1.04] sm:text-6xl lg:text-[4.7rem]">
+          <h1 className="mt-7 max-w-3xl font-display text-5xl font-bold leading-[1.04] text-white sm:text-6xl lg:text-[4.7rem]">
             Master Gospel Piano{" "}
             <span className="text-gold">
               with Confidence
             </span>
           </h1>
 
-          <p className="mt-7 max-w-2xl text-base leading-8 text-cream/70 sm:text-lg">
+          <p className="mt-7 max-w-2xl text-base leading-8 text-cream/75 sm:text-lg">
             Learn chords, progressions and how to play by ear
             through structured lessons created for beginners,
             intermediate and advanced pianists.
@@ -283,7 +266,7 @@ export default function Hero() {
               href="https://www.youtube.com/@PIANOTUTORIALS-GH"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-3 rounded-xl border border-gold/45 bg-black/20 px-8 py-4 font-semibold text-cream transition duration-300 hover:-translate-y-1 hover:border-gold hover:text-gold"
+              className="inline-flex items-center justify-center gap-3 rounded-xl border border-gold/45 bg-black/40 px-8 py-4 font-semibold text-cream backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:border-gold hover:text-gold"
             >
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-gold text-xs text-ink"
@@ -320,7 +303,7 @@ export default function Hero() {
                 <span>★</span>
               </div>
 
-              <p className="mt-1 text-sm text-cream/60">
+              <p className="mt-1 text-sm text-cream/65">
                 Trusted by 300+ students
               </p>
             </div>
