@@ -1,285 +1,65 @@
-// Piano with Aaron — Database Schema
+const express = require("express");
+const rateLimit = require("express-rate-limit");
 
-generator client {
-  provider = "prisma-client-js"
-}
+const {
+  requireAuth,
+  requireAdmin,
+} = require("../middleware/auth");
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+const {
+  signup,
+  createAdmin,
+  login,
+  me,
+  updateProfile,
+  changePassword,
+  forgotPassword,
+  resetPassword,
+} = require("../controllers/authController");
 
-enum Role {
-  STUDENT
-  ADMIN
-}
+const router = express.Router();
 
-enum Currency {
-  GHS
-  USD
-}
+// General protection against repeated authentication attempts
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Too many attempts, please try again later.",
+  },
+});
 
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
-}
+// Stronger protection for administrator account creation
+const createAdminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error:
+      "Too many administrator creation attempts. Please try again later.",
+  },
+});
 
-enum ReviewStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
+// Public authentication routes
+router.post("/signup", authLimiter, signup);
+router.post("/login", authLimiter, login);
+router.post("/forgot-password", authLimiter, forgotPassword);
+router.post("/reset-password", authLimiter, resetPassword);
 
-enum OAuthProvider {
-  GOOGLE
-  FACEBOOK
-}
+// Protected student/user routes
+router.get("/me", requireAuth, me);
+router.put("/profile", requireAuth, updateProfile);
+router.put("/change-password", requireAuth, changePassword);
 
-model User {
-  id               String    @id @default(uuid())
-  name             String
-  email            String    @unique
+// Admin-only route
+router.post(
+  "/admins",
+  requireAuth,
+  requireAdmin,
+  createAdminLimiter,
+  createAdmin
+);
 
-  // Optional because Google/Facebook users may not have a password.
-  passwordHash     String?
-
-  role             Role      @default(STUDENT)
-  profileImageUrl  String?
-  emailVerifiedAt  DateTime?
-
-  resetToken       String?
-  resetTokenExpiry DateTime?
-
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  oauthAccounts OAuthAccount[]
-  enrollments   Enrollment[]
-  payments      Payment[]
-  progress      LessonProgress[]
-  reviews       Review[]
-  certificates  Certificate[]
-
-  @@map("users")
-}
-
-model OAuthAccount {
-  id                String        @id @default(uuid())
-  userId            String
-  provider          OAuthProvider
-  providerAccountId String
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  user User @relation(
-    fields: [userId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  @@unique([provider, providerAccountId])
-  @@index([userId])
-  @@map("oauth_accounts")
-}
-
-model Course {
-  id           String   @id @default(uuid())
-  title        String
-  slug         String   @unique
-  description  String
-  thumbnailUrl String?
-  price        Decimal  @db.Decimal(10, 2)
-  currency     Currency @default(GHS)
-  category     String
-  subcategory  String
-  published    Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  sections     Section[]
-  enrollments  Enrollment[]
-  payments     Payment[]
-  reviews      Review[]
-  certificates Certificate[]
-
-  @@map("courses")
-}
-
-model Section {
-  id        String   @id @default(uuid())
-  courseId  String
-  title     String
-  order     Int      @default(0)
-  published Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  course  Course   @relation(
-    fields: [courseId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  lessons Lesson[]
-
-  @@index([courseId])
-  @@map("sections")
-}
-
-model Lesson {
-  id          String   @id @default(uuid())
-  sectionId   String
-  title       String
-  videoUrl    String
-  pdfUrl      String?
-  order       Int      @default(0)
-  isPreview   Boolean  @default(false)
-  durationSec Int?
-  createdAt   DateTime @default(now())
-
-  section Section @relation(
-    fields: [sectionId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  progress LessonProgress[]
-
-  @@index([sectionId])
-  @@map("lessons")
-}
-
-model Enrollment {
-  id        String   @id @default(uuid())
-  userId    String
-  courseId  String
-  createdAt DateTime @default(now())
-
-  user User @relation(
-    fields: [userId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  course Course @relation(
-    fields: [courseId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  @@unique([userId, courseId])
-  @@index([userId])
-  @@index([courseId])
-  @@map("enrollments")
-}
-
-model LessonProgress {
-  id          String    @id @default(uuid())
-  userId      String
-  lessonId    String
-  completed   Boolean   @default(false)
-  completedAt DateTime?
-
-  user User @relation(
-    fields: [userId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  lesson Lesson @relation(
-    fields: [lessonId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  @@unique([userId, lessonId])
-  @@index([userId])
-  @@index([lessonId])
-  @@map("lesson_progress")
-}
-
-model Payment {
-  id          String        @id @default(uuid())
-  userId      String
-  courseId    String
-  amount      Decimal       @db.Decimal(10, 2)
-  currency    Currency
-  paystackRef String        @unique
-  status      PaymentStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
-  verifiedAt  DateTime?
-
-  user User @relation(
-    fields: [userId],
-    references: [id]
-  )
-
-  course Course @relation(
-    fields: [courseId],
-    references: [id]
-  )
-
-  @@index([userId])
-  @@index([courseId])
-  @@index([status])
-  @@map("payments")
-}
-
-model Review {
-  id        String       @id @default(uuid())
-  userId    String
-  courseId  String
-  rating    Int
-  comment   String
-  status    ReviewStatus @default(PENDING)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  user User @relation(
-    fields: [userId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  course Course @relation(
-    fields: [courseId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  @@unique([userId, courseId])
-  @@index([userId])
-  @@index([courseId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("reviews")
-}
-
-model Certificate {
-  id              String   @id @default(uuid())
-  certificateCode String   @unique
-  userId          String
-  courseId        String
-  issuedAt        DateTime @default(now())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user User @relation(
-    fields: [userId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  course Course @relation(
-    fields: [courseId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  @@unique([userId, courseId])
-  @@index([userId])
-  @@index([courseId])
-  @@index([certificateCode])
-  @@index([issuedAt])
-  @@map("certificates")
-}
+module.exports = router;
