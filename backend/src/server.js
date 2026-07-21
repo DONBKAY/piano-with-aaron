@@ -3,6 +3,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const passport = require("passport");
+
+require("./config/passport");
 
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
@@ -20,6 +23,8 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "https://piano-with-aaron.vercel.app",
+  "https://www.pianowithaaron.com",
+  "https://pianowithaaron.com",
 ];
 
 if (process.env.CLIENT_URL) {
@@ -29,6 +34,9 @@ if (process.env.CLIENT_URL) {
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ""));
 }
+
+// Remove duplicate origins.
+const uniqueAllowedOrigins = [...new Set(allowedOrigins)];
 
 app.use(
   cors({
@@ -41,7 +49,7 @@ app.use(
 
       const normalizedOrigin = origin.replace(/\/$/, "");
 
-      if (allowedOrigins.includes(normalizedOrigin)) {
+      if (uniqueAllowedOrigins.includes(normalizedOrigin)) {
         return callback(null, true);
       }
 
@@ -71,6 +79,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
+// Passport uses JWT-based authentication.
+// Express sessions are not required.
+app.use(passport.initialize());
+
 // ------------------------------------------------------------
 // Home
 // ------------------------------------------------------------
@@ -88,7 +100,12 @@ app.get("/health", (req, res) => {
   res.status(200).json({
     status: "ok",
     service: "Piano With Aaron API",
-    allowedOrigins,
+    allowedOrigins: uniqueAllowedOrigins,
+    googleAuthenticationConfigured: Boolean(
+      process.env.GOOGLE_CLIENT_ID &&
+        process.env.GOOGLE_CLIENT_SECRET &&
+        process.env.GOOGLE_CALLBACK_URL
+    ),
   });
 });
 
@@ -146,5 +163,5 @@ const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Piano With Aaron API running on port ${PORT}`);
-  console.log("Allowed frontend origins:", allowedOrigins);
+  console.log("Allowed frontend origins:", uniqueAllowedOrigins);
 });
