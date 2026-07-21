@@ -31,24 +31,56 @@ enum ReviewStatus {
   REJECTED
 }
 
+enum OAuthProvider {
+  GOOGLE
+  FACEBOOK
+}
+
 model User {
   id               String    @id @default(uuid())
   name             String
   email            String    @unique
-  passwordHash     String
+
+  // Optional because Google/Facebook users may not have a password.
+  passwordHash     String?
+
   role             Role      @default(STUDENT)
+  profileImageUrl  String?
+  emailVerifiedAt  DateTime?
+
   resetToken       String?
   resetTokenExpiry DateTime?
+
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  enrollments Enrollment[]
-  payments    Payment[]
-  progress    LessonProgress[]
-  reviews     Review[]
-  certificates Certificate[]
+  oauthAccounts OAuthAccount[]
+  enrollments   Enrollment[]
+  payments      Payment[]
+  progress      LessonProgress[]
+  reviews       Review[]
+  certificates  Certificate[]
 
   @@map("users")
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid())
+  userId            String
+  provider          OAuthProvider
+  providerAccountId String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
 }
 
 model Course {
@@ -82,7 +114,12 @@ model Section {
   published Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course  Course   @relation(
+    fields: [courseId],
+    references: [id],
+    onDelete: Cascade
+  )
+
   lessons Lesson[]
 
   @@index([courseId])
@@ -100,7 +137,12 @@ model Lesson {
   durationSec Int?
   createdAt   DateTime @default(now())
 
-  section  Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  section Section @relation(
+    fields: [sectionId],
+    references: [id],
+    onDelete: Cascade
+  )
+
   progress LessonProgress[]
 
   @@index([sectionId])
@@ -113,8 +155,17 @@ model Enrollment {
   courseId  String
   createdAt DateTime @default(now())
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  course Course @relation(
+    fields: [courseId],
+    references: [id],
+    onDelete: Cascade
+  )
 
   @@unique([userId, courseId])
   @@index([userId])
@@ -129,8 +180,17 @@ model LessonProgress {
   completed   Boolean   @default(false)
   completedAt DateTime?
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  lesson Lesson @relation(
+    fields: [lessonId],
+    references: [id],
+    onDelete: Cascade
+  )
 
   @@unique([userId, lessonId])
   @@index([userId])
@@ -149,8 +209,15 @@ model Payment {
   createdAt   DateTime      @default(now())
   verifiedAt  DateTime?
 
-  user   User   @relation(fields: [userId], references: [id])
-  course Course @relation(fields: [courseId], references: [id])
+  user User @relation(
+    fields: [userId],
+    references: [id]
+  )
+
+  course Course @relation(
+    fields: [courseId],
+    references: [id]
+  )
 
   @@index([userId])
   @@index([courseId])
@@ -168,8 +235,17 @@ model Review {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  course Course @relation(
+    fields: [courseId],
+    references: [id],
+    onDelete: Cascade
+  )
 
   @@unique([userId, courseId])
   @@index([userId])
@@ -188,8 +264,17 @@ model Certificate {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  course Course @relation(
+    fields: [courseId],
+    references: [id],
+    onDelete: Cascade
+  )
 
   @@unique([userId, courseId])
   @@index([userId])
