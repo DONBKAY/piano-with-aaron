@@ -35,17 +35,20 @@ model User {
   id               String    @id @default(uuid())
   name             String
   email            String    @unique
-  passwordHash     String
+  passwordHash     String?
+  googleId         String?   @unique
+  profileImageUrl  String?
+  emailVerifiedAt  DateTime?
   role             Role      @default(STUDENT)
   resetToken       String?
   resetTokenExpiry DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  enrollments Enrollment[]
-  payments    Payment[]
-  progress    LessonProgress[]
-  reviews     Review[]
+  enrollments  Enrollment[]
+  payments     Payment[]
+  progress     LessonProgress[]
+  reviews      Review[]
   certificates Certificate[]
 
   @@map("users")
