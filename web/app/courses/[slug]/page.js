@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { courseApi, getToken, paymentApi } from "../../../lib/api";
+import { trackMetaEvent } from "../../../lib/metaPixel";
 
 function formatDuration(seconds) {
   if (!seconds) return "";
@@ -154,6 +155,16 @@ export default function CourseDetailPage() {
     setEnrolling(true);
 
     try {
+      trackMetaEvent("InitiateCheckout", {
+        value: numericPrice,
+        currency: course.currency || "GHS",
+        content_name: course.title,
+        content_category: course.category || "Piano Course",
+        content_ids: [String(course.id)],
+        content_type: "product",
+        num_items: 1,
+      });
+
       const { authorizationUrl, reference } =
         await paymentApi.initialize(course.id, token);
 
@@ -359,6 +370,7 @@ export default function CourseDetailPage() {
 
                 <div>
                   <StarRating rating={averageRating} />
+
                   <p className="mt-1 text-xs opacity-60">
                     {reviewCountLabel}
                   </p>
