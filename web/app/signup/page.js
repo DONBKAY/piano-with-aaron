@@ -3,23 +3,39 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authApi, saveToken } from "../../lib/api";
+import { trackMetaEvent } from "../../lib/metaPixel";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
+
     setError("");
     setLoading(true);
+
     try {
       const { token } = await authApi.signup(form);
+
       saveToken(token);
+
+      trackMetaEvent("CompleteRegistration", {
+        content_name: "Piano With Aaron Account",
+        status: "completed",
+      });
+
       router.push("/");
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Unable to create your account.");
     } finally {
       setLoading(false);
     }
@@ -28,8 +44,13 @@ export default function SignupPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-white/60 dark:bg-deep/60 backdrop-blur rounded-2xl shadow-xl p-8 border border-gold/20">
-        <h1 className="font-display text-3xl mb-1">Create your account</h1>
-        <p className="text-sm opacity-70 mb-6">Start playing piano today.</p>
+        <h1 className="font-display text-3xl mb-1">
+          Create your account
+        </h1>
+
+        <p className="text-sm opacity-70 mb-6">
+          Start playing piano today.
+        </p>
 
         {error && (
           <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -39,38 +60,75 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Full name</label>
+            <label htmlFor="name" className="text-sm font-medium">
+              Full name
+            </label>
+
             <input
+              id="name"
+              name="name"
               required
+              autoComplete="name"
               className="mt-1 w-full rounded-lg border border-gold/30 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold"
               value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  name: e.target.value,
+                })
+              }
             />
           </div>
+
           <div>
-            <label className="text-sm font-medium">Email</label>
+            <label htmlFor="email" className="text-sm font-medium">
+              Email
+            </label>
+
             <input
+              id="email"
+              name="email"
               required
               type="email"
+              autoComplete="email"
               className="mt-1 w-full rounded-lg border border-gold/30 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold"
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  email: e.target.value,
+                })
+              }
             />
           </div>
+
           <div>
-            <label className="text-sm font-medium">Password</label>
+            <label htmlFor="password" className="text-sm font-medium">
+              Password
+            </label>
+
             <input
+              id="password"
+              name="password"
               required
               type="password"
               minLength={8}
+              autoComplete="new-password"
               className="mt-1 w-full rounded-lg border border-gold/30 bg-transparent px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gold"
               value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  password: e.target.value,
+                })
+              }
             />
           </div>
+
           <button
+            type="submit"
             disabled={loading}
-            className="w-full bg-gold text-ink font-semibold rounded-lg py-2.5 hover:opacity-90 transition disabled:opacity-50"
+            className="w-full bg-gold text-ink font-semibold rounded-lg py-2.5 hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Creating account..." : "Sign up"}
           </button>
