@@ -1,60 +1,64 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Script from "next/script";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
 export default function MetaPixel() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const initialized = useRef(false);
 
   useEffect(() => {
-    if (!window.fbq) return;
+    if (!initialized.current) {
+      initialized.current = true;
+      return;
+    }
 
-    window.fbq("track", "PageView");
-  }, [pathname, searchParams]);
+    if (typeof window !== "undefined" && window.fbq) {
+      window.fbq("track", "PageView");
+    }
+  }, [pathname]);
 
-  if (!META_PIXEL_ID) return null;
+  if (!META_PIXEL_ID) {
+    return null;
+  }
 
   return (
-    <>
-      <Script id="meta-pixel" strategy="afterInteractive">
-        {`
+    <Script
+      id="meta-pixel"
+      strategy="afterInteractive"
+      dangerouslySetInnerHTML={{
+        __html: `
           !function(f,b,e,v,n,t,s){
             if(f.fbq)return;
             n=f.fbq=function(){
-              n.callMethod?
-              n.callMethod.apply(n,arguments):n.queue.push(arguments)
+              n.callMethod
+                ? n.callMethod.apply(n,arguments)
+                : n.queue.push(arguments);
             };
             if(!f._fbq)f._fbq=n;
             n.push=n;
-            n.loaded=!0;
+            n.loaded=true;
             n.version='2.0';
             n.queue=[];
             t=b.createElement(e);
-            t.async=!0;
+            t.async=true;
             t.src=v;
             s=b.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s);
-          }(window, document,'script',
-          'https://connect.facebook.net/en_US/fbevents.js');
+          }(
+            window,
+            document,
+            'script',
+            'https://connect.facebook.net/en_US/fbevents.js'
+          );
 
           fbq('init', '${META_PIXEL_ID}');
           fbq('track', 'PageView');
-        `}
-      </Script>
-
-      <noscript>
-        <img
-          height="1"
-          width="1"
-          style={{ display: "none" }}
-          alt=""
-          src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
-        />
-      </noscript>
-    </>
+        `,
+      }}
+    />
   );
 }
